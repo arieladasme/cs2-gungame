@@ -73,6 +73,10 @@ namespace GunGame.API
                 return (int)player.Level;
             return 0;
         }
+        public bool IsPlayerOnKnifeLevel(int slot)
+        {
+            return _gunGame.IsPlayerOnKnifeLevel(slot);
+        }
         public int GetMaxCurrentLevel()
         {
             var player = _gunGame.playerManager.FindLeader();
@@ -125,7 +129,7 @@ namespace GunGame.API
                 {
                     _gunGame.GiveNextWeapon(slot);
                 }
-                
+
             }
         }
     }
