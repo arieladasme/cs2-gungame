@@ -53,7 +53,7 @@ namespace GunGame
         public readonly IStringLocalizer<GunGame> _localizer;
         public PlayerLanguageManager playerLanguageManager = new();
         public override string ModuleName => "CS2_GunGame";
-        public override string ModuleVersion => "v1.2.1";
+        public override string ModuleVersion => "v1.2.2";
         public override string ModuleAuthor => "Sergey";
         public override string ModuleDescription => "GunGame mode for CS2";
         public CoreAPI CoreAPI { get; set; } = null!;
@@ -197,7 +197,7 @@ namespace GunGame
             return true;
         }
         public SoundMapper soundMapper;
-        public readonly record struct SoundInfo(string SoundValue, bool IsRandom, List<string> SoundList= null!);
+        public readonly record struct SoundInfo(string SoundValue, bool IsRandom, List<string> SoundList = null!);
         public PlayerManager playerManager;
         public Dictionary<ulong, int> PlayerLevelsBeforeDisconnect = new();
         public Dictionary<ulong, int> PlayerHandicapTimes = new();
@@ -890,10 +890,10 @@ namespace GunGame
             {
                 Logger.LogError("Error loading config on Restart command. Plugin is inactive");
             }
-/*            AddTimer(4.0f, () => // грузятся в OnRoundStart
-            {
-                LoadSpawnPoints();
-            }); */
+            /*            AddTimer(4.0f, () => // грузятся в OnRoundStart
+                        {
+                            LoadSpawnPoints();
+                        }); */
             Logger.LogInformation($"[GunGame] map {Server.MapName} loaded");
         }
         private void OnMapEnd()
@@ -1102,7 +1102,7 @@ namespace GunGame
                         if ((Config.WarmupTimeLength - WarmupCounter) == 4)
                         {
                             PlayConfiguredSound("WarmupTimer");
-//                            PlaySound(null!, Config.WarmupTimerSound);
+                            //                            PlaySound(null!, Config.WarmupTimerSound);
                         }
                     }
                 }
@@ -1145,33 +1145,33 @@ namespace GunGame
             }
             Console.WriteLine("WarmUp End");
 
-/*            AddTimer(2.5f, () =>
-            {
-                var entities = Utilities.FindAllEntitiesByDesignerName<CCSWeaponBaseGun>("weapon_");
-                foreach (var entity in entities)
-                {
-                    if (entity != null && entity.IsValid
-                        && entity.State == CSWeaponState_t.WEAPON_NOT_CARRIED
-                        && entity.DesignerName.StartsWith("weapon_"))
-                    {
-                        MapWeaponList.Add(entity);
-                    }
-                }
-            });
-            AddTimer(3.0f, () =>
-            {
-                if (MapWeaponList.Count > 0)
-                {
-                    foreach (var entity in MapWeaponList)
-                    {
-                        if (entity != null && entity.IsValid && entity.State == CSWeaponState_t.WEAPON_NOT_CARRIED)
+            /*            AddTimer(2.5f, () =>
                         {
-                            entity.Remove();
-                        }
-                    }
-                    MapWeaponList.Clear();
-                }
-            }); */
+                            var entities = Utilities.FindAllEntitiesByDesignerName<CCSWeaponBaseGun>("weapon_");
+                            foreach (var entity in entities)
+                            {
+                                if (entity != null && entity.IsValid
+                                    && entity.State == CSWeaponState_t.WEAPON_NOT_CARRIED
+                                    && entity.DesignerName.StartsWith("weapon_"))
+                                {
+                                    MapWeaponList.Add(entity);
+                                }
+                            }
+                        });
+                        AddTimer(3.0f, () =>
+                        {
+                            if (MapWeaponList.Count > 0)
+                            {
+                                foreach (var entity in MapWeaponList)
+                                {
+                                    if (entity != null && entity.IsValid && entity.State == CSWeaponState_t.WEAPON_NOT_CARRIED)
+                                    {
+                                        entity.Remove();
+                                    }
+                                }
+                                MapWeaponList.Clear();
+                            }
+                        }); */
         }
         /**************  Events **********************************************************/
         /**************  Events **********************************************************/
@@ -1586,7 +1586,7 @@ namespace GunGame
                 if (TeamKill)
                 {
                     PlayConfiguredSound("TeamKill", 0.7f);
-//                    PlayRandomSoundDelayed(0.7f, Config.TeamKillSound);
+                    //                    PlayRandomSoundDelayed(0.7f, Config.TeamKillSound);
                     Killer.CurrentLevelPerRound -= Config.TkLooseLevel;
                     if (Killer.CurrentLevelPerRound < 0)
                     {
@@ -1695,9 +1695,9 @@ namespace GunGame
 
                         if (usedWeaponInfo.LevelIndex == SpecialWeapon.KnifeLevelIndex)
                         {
-//                            Logger.LogInformation($"Knife steal by {KillerController.PlayerName} on {VictimController.PlayerName}");
+                            //                            Logger.LogInformation($"Knife steal by {KillerController.PlayerName} on {VictimController.PlayerName}");
                             PlayConfiguredSound("KnifeSteal", 0.7f);
-//                            PlayRandomSoundDelayed(0.7f, Config.KnifeStealSound);
+                            //                            PlayRandomSoundDelayed(0.7f, Config.KnifeStealSound);
                             try
                             {
                                 /***** tells others that they have been killed with a knife ********/
@@ -1713,9 +1713,9 @@ namespace GunGame
                         }
                         else if (usedWeaponInfo.LevelIndex == SpecialWeapon.MolotovLevelIndex)
                         {
-//                            Logger.LogInformation($"Molotov kill by {KillerController.PlayerName} on {VictimController.PlayerName}");
+                            //                            Logger.LogInformation($"Molotov kill by {KillerController.PlayerName} on {VictimController.PlayerName}");
                             PlayConfiguredSound("MolotovKill", 0.7f);
-//                            PlaySoundDelayed(0.7f, null!, Config.MolotovKillSound);
+                            //                            PlaySoundDelayed(0.7f, null!, Config.MolotovKillSound);
                         }
                     }
                 }
@@ -1856,7 +1856,7 @@ namespace GunGame
                     {
                         if (!KillerController.IsBot)
                             PlayConfiguredSound("MultiKill", 0.0f, KillerController);
-//                            PlaySound(KillerController, Config.MultiKillSound);
+                        //                            PlaySound(KillerController, Config.MultiKillSound);
 
                         if (Config.MultiKillChat)
                         {
@@ -2852,10 +2852,10 @@ namespace GunGame
                 }
             }
         }
-/*        public void PlaySoundDelayed(float delay, CCSPlayerController player, string str)
-        {
-            AddTimer(delay, () => PlaySound(player, str));
-        } */
+        /*        public void PlaySoundDelayed(float delay, CCSPlayerController player, string str)
+                {
+                    AddTimer(delay, () => PlaySound(player, str));
+                } */
         public void PlayConfiguredSound(string soundKey, float delay = 0.0f, CCSPlayerController player = null!)
         {
             var soundData = soundMapper.GetSoundValue(soundKey);
@@ -2869,7 +2869,7 @@ namespace GunGame
             {
                 if (string.IsNullOrEmpty(soundData.Value.SoundValue))
                 {
-//                    Logger.LogError($"SoundPlayer: The sound value for key '{soundKey}' is null or empty.");
+                    //                    Logger.LogError($"SoundPlayer: The sound value for key '{soundKey}' is null or empty.");
                     return;
                 }
                 if (delay > 0.0f)
@@ -2916,7 +2916,7 @@ namespace GunGame
                     var player = playerManager.FindBySlot(playerController.Slot, "PlaySoundEvent");
                     if (player != null && player.Music && playerController.PlayerPawn != null && playerController.PlayerPawn.Value != null)
                     {
-//                        playerController.EmitSound(str, filter, 0.8f);
+                        //                        playerController.EmitSound(str, filter, 0.8f);
                         playerController.EmitSound(str, filter);
                     }
                 }
@@ -2964,10 +2964,10 @@ namespace GunGame
                 }
             }
         }
-/*        public void PlayRandomSoundDelayed(float delay, List<string> soundList)
-        {
-            AddTimer(delay, () => PlayRandomSound(soundList));
-        } */
+        /*        public void PlayRandomSoundDelayed(float delay, List<string> soundList)
+                {
+                    AddTimer(delay, () => PlayRandomSound(soundList));
+                } */
         public void PlayRandomSound(List<string> soundList, CCSPlayerController pc = null!)
         {
             if (soundList == null || soundList.Count == 0)
@@ -2988,7 +2988,7 @@ namespace GunGame
                 }
             }
         }
-// ************************ Проверить почему ForLeaderLevel играет MolotovKill и KnifeInfo !!!!!!!!!!!!
+        // ************************ Проверить почему ForLeaderLevel играет MolotovKill и KnifeInfo !!!!!!!!!!!!
         public void PlaySoundForLeaderLevel(int slot = -1)
         {
             if (slot < 0)
@@ -3220,7 +3220,7 @@ namespace GunGame
                 }
             }
             PlayConfiguredSound("FriendlyFireInfo");
-//            PlaySound(null!, Config.FriendlyFireInfoSound);
+            //            PlaySound(null!, Config.FriendlyFireInfoSound);
         }
         private void Timer_HandicapUpdate()
         {
@@ -3748,7 +3748,7 @@ namespace GunGame
                                         UTIL_PlaySoundDelayed(1.7, 0, Winner);
                                     } */
                     PlayConfiguredSound("Winner", 1.7f);
-//                    PlayRandomSoundDelayed(1.7f, Config.WinnerSound);
+                    //                    PlayRandomSoundDelayed(1.7f, Config.WinnerSound);
 
                     if (Config.AlltalkOnWin)
                     {
@@ -3785,19 +3785,19 @@ namespace GunGame
                     if (difference < 0)
                     {
                         PlayConfiguredSound("LevelDown", 0.0f, pc);
-//                        PlaySound(pc, Config.LevelDownSound);
+                        //                        PlaySound(pc, Config.LevelDownSound);
                     }
                     else
                     {
                         if (KnifeSteal)
                         {
                             PlayConfiguredSound("LevelStealUp", 0.0f, pc);
-//                            PlaySound(pc, Config.LevelStealUpSound);
+                            //                            PlaySound(pc, Config.LevelStealUpSound);
                         }
                         else
                         {
                             PlayConfiguredSound("LevelUp", 0.0f, pc);
-//                            PlaySound(pc, Config.LevelUpSound);
+                            //                            PlaySound(pc, Config.LevelUpSound);
                         }
                     }
                 }
@@ -5283,4 +5283,4 @@ namespace GunGame
     }
 }
 // Colors Available = "{default} {white} {darkred} {green} {lightyellow}" "{lightblue} {olive} {lime} {red} {lightpurple}"
-                      //"{purple} {grey} {yellow} {gold} {silver}" "{blue} {darkblue} {bluegrey} {magenta} {lightred}" "{orange}"
+//"{purple} {grey} {yellow} {gold} {silver}" "{blue} {darkblue} {bluegrey} {magenta} {lightred}" "{orange}"
