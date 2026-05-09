@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>cs2-gungame</title>
 </head>
 <body>
 
@@ -38,8 +37,8 @@
 <h2>Requirements</h2>
 <ul>
     <li>Counter-Strike 2</li>
-    <li>Metamod:Source v1282+</li>
-    <li>Counter Strike Share v.204+</li>
+    <li>Metamod:Source 2.0 build 1401+</li>
+    <li>Counter Strike Sharp v.1.0.367+</li>
 </ul>
 
 <h2>Installation</h2>
