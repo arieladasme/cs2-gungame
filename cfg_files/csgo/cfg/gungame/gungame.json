@@ -127,7 +127,7 @@
   "_comment.WorldspawnSuicide": "Level down player if they kill themself by WorldSpawn Suicide, 0 - Disable, 1..N - Levels to loose",
   "SelfKillProtection": true,
   "_comment.SelfKillProtection": "Prevents players from using the kill command.",
-  "LevelsInScoreboard": false,
+  "LevelsInScoreboard": 0,
   "_comment.LevelsInScoreboard": "Show levels in the scoreboard. (It does not work now)",
   "ShowLeaderWeapon": true,
   "_comment.ShowLeaderWeapon": "Show leader's weapon name in chat with leading message",
