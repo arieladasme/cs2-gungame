@@ -53,7 +53,7 @@ namespace GunGame
         public readonly IStringLocalizer<GunGame> _localizer;
         public PlayerLanguageManager playerLanguageManager = new();
         public override string ModuleName => "CS2_GunGame";
-        public override string ModuleVersion => "v1.2.2";
+        public override string ModuleVersion => "v1.2.4";
         public override string ModuleAuthor => "Sergey";
         public override string ModuleDescription => "GunGame mode for CS2";
         public CoreAPI CoreAPI { get; set; } = null!;
@@ -788,8 +788,9 @@ namespace GunGame
                         }
                     }
                     UpdatePlayerScoreLevel(player);
-                    if (statsManager != null)
-                        dbQueue.EnqueueOperation(async () => await statsManager.GetPlayerWins(player));
+                    player.LevelRestore = false;
+                    CancelAuthorisationRetry(player);
+                    QueuePlayerStatsLoad(player);
                 }
                 else
                 {
@@ -817,18 +818,36 @@ namespace GunGame
             if (playerController.AuthorizedSteamID == null)
             {
                 Logger.LogInformation($"{playerController.PlayerName} has AuthorizedSteamID - null");
+                if (player.AuthorisationRetryTimer is not null)
+                {
+                    return;
+                }
                 if (++player.IdAttempts > 5)
                 {
                     Logger.LogInformation($"{player.PlayerName} kicked because of 6 of unsuccessful authorisation attempts.");
                     Server.ExecuteCommand($"kickid {slot} NoSteamId");
                     return;
                 }
-                AddTimer(5.0f, () =>
+                player.AuthorisationRetryTimer = AddTimer(5.0f, () =>
                 {
+                    player.AuthorisationRetryTimer = null;
+                    if (!playerManager.IsCurrentPlayer(slot, player))
+                    {
+                        return;
+                    }
+
+                    var retryPlayerController = Utilities.GetPlayerFromSlot(slot);
+                    if (retryPlayerController == null || !retryPlayerController.IsValid || retryPlayerController.SteamID != id.SteamId64)
+                    {
+                        return;
+                    }
+
                     OnClientAuthorized(slot, id);
-                });
+                }, TimerFlags.STOP_ON_MAPCHANGE);
                 return;
             }
+            CancelAuthorisationRetry(player);
+            player.IdAttempts = 0;
             if (player.SavedSteamID != playerController.AuthorizedSteamID.SteamId64)
             {
                 player.UpdatePlayerController(playerController);
@@ -843,7 +862,9 @@ namespace GunGame
             {
                 Logger.LogInformation($"[GUNGAME]* OnClientPutInServer: bad player IP {player.PlayerName} {playerIP}");
             }
-            if (Config.IsPluginEnabled && player.LevelRestore) //player was not restored in PutInServer
+            bool restoreLevel = player.LevelRestore;
+            player.LevelRestore = false;
+            if (Config.IsPluginEnabled && restoreLevel) //player was not restored in PutInServer
             {
                 if (Config.RestoreLevelOnReconnect)
                 {
@@ -859,9 +880,24 @@ namespace GunGame
                     }
                 }
                 UpdatePlayerScoreLevel(player);
-                if (statsManager != null)
-                    dbQueue.EnqueueOperation(async () => await statsManager.GetPlayerWins(player));
+                QueuePlayerStatsLoad(player);
             }
+        }
+        private void QueuePlayerStatsLoad(GGPlayer player)
+        {
+            var stats = statsManager;
+            if (stats == null || !player.TryQueueStatsLoad(player.SavedSteamID))
+            {
+                return;
+            }
+
+            dbQueue.EnqueueOperation(() => stats.GetPlayerWins(player));
+        }
+        private static void CancelAuthorisationRetry(GGPlayer player)
+        {
+            var retryTimer = player.AuthorisationRetryTimer;
+            player.AuthorisationRetryTimer = null;
+            retryTimer?.Kill();
         }
         private void OnMapStart(string name)
         {
@@ -1014,7 +1050,12 @@ namespace GunGame
         private void OnClientDisconnect(int slot)
         {
             var player = playerManager.FindBySlot(slot, "OnClientDisconnect");
-            if (player == null || !player.PutInServer)
+            if (player == null)
+            {
+                return;
+            }
+            CancelAuthorisationRetry(player);
+            if (!player.PutInServer)
             {
                 return;
             }
@@ -5078,6 +5119,13 @@ namespace GunGame
         {
             return playerMap.TryGetValue(slot, out GGPlayer? player);
         }
+        public bool IsCurrentPlayer(int slot, GGPlayer player)
+        {
+            lock (lockObject)
+            {
+                return playerMap.TryGetValue(slot, out GGPlayer? currentPlayer) && ReferenceEquals(currentPlayer, player);
+            }
+        }
         public GGPlayer? FindLeader()
         {
             int leaderId = -1;
@@ -5184,6 +5232,8 @@ namespace GunGame
     {
         private readonly object lockObject = new();
         private readonly GunGame Plugin;
+        private ulong statsLoadSteamId;
+        private bool statsLoadRequested;
         public GGPlayer(int slot, GunGame plugin)
         {
             Plugin = plugin;
@@ -5230,6 +5280,7 @@ namespace GunGame
         public int LevelsPerRound { get; set; } = 0;
         public bool PutInServer { get; set; } = false;
         public int IdAttempts { get; set; }
+        public CounterStrikeSharp.API.Modules.Timers.Timer? AuthorisationRetryTimer { get; set; }
         public QAngle? Angles { get; set; }
         public Vector? Origin { get; set; }
         public int AfkCount { get; set; } = 0;
@@ -5239,6 +5290,27 @@ namespace GunGame
         public string IP { get; set; }
         public CultureInfo Culture { get; set; }
         public bool Music { get; set; }
+        public bool TryQueueStatsLoad(ulong steamId)
+        {
+            if (steamId == 0)
+            {
+                return false;
+            }
+
+            if (statsLoadSteamId != steamId)
+            {
+                statsLoadSteamId = steamId;
+                statsLoadRequested = false;
+            }
+
+            if (statsLoadRequested)
+            {
+                return false;
+            }
+
+            statsLoadRequested = true;
+            return true;
+        }
         public void SetLevel(int setLevel)
         {
             if (setLevel > GGVariables.Instance.WeaponOrderCount || setLevel < 0)
