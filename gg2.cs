@@ -3885,146 +3885,13 @@ namespace GunGame
                     return oldLevel;
                 }
 
-                if (!GGVariables.Instance.IsVotingCalled && Level > (GGVariables.Instance.WeaponOrderCount - Config.VoteLevelLessWeaponCount))
-                {
-                    GGVariables.Instance.IsVotingCalled = true;
-                    Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.mapvote.cfg");
-                }
-
-                if (Config.DisableRtvLevel > 0 && !GGVariables.Instance.IsCalledDisableRtv && Level >= Config.DisableRtvLevel)
-                {
-                    GGVariables.Instance.IsCalledDisableRtv = true;
-                    Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.disable_rtv.cfg");
-                }
-
-                if (Config.EnableFriendlyFireLevel > 0 && !GGVariables.Instance.IsCalledEnableFriendlyFire && Level >= Config.EnableFriendlyFireLevel)
-                {
-                    GGVariables.Instance.IsCalledEnableFriendlyFire = true;
-                    if (Config.FriendlyFireOnOff)
-                    {
-                        ChangeFriendlyFire(true);
-                    }
-                    else
-                    {
-                        ChangeFriendlyFire(false);
-                    }
-                }
+                ApplyLevelThresholds(Level);
 
                 if (Level > GGVariables.Instance.WeaponOrderCount)
                 {
                     /* Winner Winner Winner */
                     GGVariables.Instance.GameWinner = new(player);
-                    LooserName = "";
-                    if (victimPc != null && victimPc.IsValid)
-                    {
-                        LooserName = victimPc.PlayerName;
-                    }
-                    //                Logger.LogInformation($"Winner {player.PlayerName}");
-                    if (Config.WinnerMessage > 0)
-                    {
-                        int winnerTeam = player.GetTeam();
-                        if (Config.WinnerMessage == 1)
-                        {
-                            var playerEntities = GetValidPlayers();
-                            if (playerEntities != null && playerEntities.Any())
-                            {
-                                foreach (var playerController in playerEntities)
-                                {
-                                    var pl = playerManager.FindBySlot(playerController.Slot);
-                                    if (pl != null)
-                                    {
-                                        string text = (winnerTeam == 2 ? " \x02" : " \x0C") + pl.Translate("winner.is", GGVariables.Instance.GameWinner.Name) + (winnerTeam == 2 ? " \x0C" : " \x02") + pl.Translate("looser.is", LooserName);
-                                        playerController.PrintToChat(text);
-                                    }
-                                }
-                            }
-                        }
-                        else if (Config.WinnerMessage == 2 || Config.WinnerMessage == 3)
-                        {
-                            string fontColour;
-                            if (winnerTeam == 2)
-                            {
-                                fontColour = "#FF5959";
-                            }
-                            else if (winnerTeam == 3)
-                            {
-                                fontColour = "#00BFFF";
-                            }
-                            else
-                            {
-                                fontColour = "#FFFFFF";
-                            }
-                            WinnerMessage[0] += fontColour;
-                            Listeners.OnTick onTick = new(OnTickHandle);
-                            RegisterListener(onTick);
-                            float showTime = Config.EndGameDelay - 5;
-                            if (showTime < 5)
-                                showTime = 5;
-                            AddTimer(showTime, () =>
-                            {
-                                RemoveListener(onTick);
-                            });
-                        }
-                        else if (Config.WinnerMessage == 4)
-                        {
-                            var playerEntities = GetValidPlayers();
-                            if (playerEntities != null && playerEntities.Any())
-                            {
-                                foreach (var playerController in playerEntities)
-                                {
-                                    string part1, part2;
-                                    using (new WithTemporaryCulture(playerController.GetLanguage()))
-                                    {
-                                        part1 = Localizer["winner.is", GGVariables.Instance.GameWinner.Name];
-                                        part2 = Localizer["looser.is", LooserName];
-                                    }
-                                    DisplayHint(playerController, part1 + " " + part2);
-                                }
-                            }
-                        }
-                    }
-                    try
-                    {
-                        CoreAPI.RaiseWinnerEvent(playerSlot, victim);
-                    }
-                    catch (Exception ex)
-                    {
-                        Server.NextFrame(() =>
-                        {
-                            Logger.LogError($"[GunGame API ERROR] RaiseWinnerEvent returned exception: {ex.Message}");
-                        });
-                    }
-                    if (!(Config.DontAddWinsOnBot && victimPc != null && victimPc.IsValid && victimPc.IsBot))
-                    {
-                        SavePlayerWins(player);
-                    }
-
-                    if (Config.WinnerFreezePlayers)
-                    {
-                        FreezeAllPlayers();
-                    }
-                    EndMultiplayerGameDelayed();
-
-                    /* they're probably letting someone else celebrate their victory here
-                                    new result;
-                                    Call_StartForward(FwdSoundWinner);
-                                    Call_PushCell(client);
-                                    Call_Finish(result);
-
-                                    if ( !result ) {
-                                        UTIL_PlaySoundDelayed(1.7, 0, Winner);
-                                    } */
-                    PlayConfiguredSound("Winner", 1.7f);
-                    //                    PlayRandomSoundDelayed(1.7f, Config.WinnerSound);
-
-                    if (Config.AlltalkOnWin)
-                    {
-                        // Set both: sv_full_alltalk alone does not open team mics in CS2.
-                        var sv_full_alltalk = ConVar.Find("sv_full_alltalk");
-                        sv_full_alltalk?.SetValue(true);
-                        var sv_alltalk = ConVar.Find("sv_alltalk");
-                        sv_alltalk?.SetValue(true);
-                    }
+                    DeclareWinnerCommon(player, victimPc);
                     return oldLevel;
                 }
 
@@ -4079,6 +3946,155 @@ namespace GunGame
             {
                 Logger.LogInformation($"******** killer invalid - changeLevel not accepted");
                 return oldLevel;
+            }
+        }
+        // Level-based one-shot triggers (mapvote / disable rtv / friendly fire).
+        // Extracted from ChangeLevel so the teamplay flow can reuse them per team level.
+        private void ApplyLevelThresholds(int Level)
+        {
+            if (!GGVariables.Instance.IsVotingCalled && Level > (GGVariables.Instance.WeaponOrderCount - Config.VoteLevelLessWeaponCount))
+            {
+                GGVariables.Instance.IsVotingCalled = true;
+                Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.mapvote.cfg");
+            }
+
+            if (Config.DisableRtvLevel > 0 && !GGVariables.Instance.IsCalledDisableRtv && Level >= Config.DisableRtvLevel)
+            {
+                GGVariables.Instance.IsCalledDisableRtv = true;
+                Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.disable_rtv.cfg");
+            }
+
+            if (Config.EnableFriendlyFireLevel > 0 && !GGVariables.Instance.IsCalledEnableFriendlyFire && Level >= Config.EnableFriendlyFireLevel)
+            {
+                GGVariables.Instance.IsCalledEnableFriendlyFire = true;
+                if (Config.FriendlyFireOnOff)
+                {
+                    ChangeFriendlyFire(true);
+                }
+                else
+                {
+                    ChangeFriendlyFire(false);
+                }
+            }
+        }
+        // Winner ceremony shared by individual and teamplay modes. Assumes
+        // GGVariables.Instance.GameWinner was already assigned by the caller.
+        private void DeclareWinnerCommon(GGPlayer player, CCSPlayerController victimPc)
+        {
+            int playerSlot = player.Slot;
+            int victim = -1;
+            LooserName = "";
+            if (victimPc != null && victimPc.IsValid)
+            {
+                victim = victimPc.Slot;
+                LooserName = victimPc.PlayerName;
+            }
+            //                Logger.LogInformation($"Winner {player.PlayerName}");
+            if (Config.WinnerMessage > 0)
+            {
+                int winnerTeam = player.GetTeam();
+                if (Config.WinnerMessage == 1)
+                {
+                    var playerEntities = GetValidPlayers();
+                    if (playerEntities != null && playerEntities.Any())
+                    {
+                        foreach (var playerController in playerEntities)
+                        {
+                            var pl = playerManager.FindBySlot(playerController.Slot);
+                            if (pl != null)
+                            {
+                                string text = (winnerTeam == 2 ? " \x02" : " \x0C") + pl.Translate("winner.is", GGVariables.Instance.GameWinner!.Name) + (winnerTeam == 2 ? " \x0C" : " \x02") + pl.Translate("looser.is", LooserName);
+                                playerController.PrintToChat(text);
+                            }
+                        }
+                    }
+                }
+                else if (Config.WinnerMessage == 2 || Config.WinnerMessage == 3)
+                {
+                    string fontColour;
+                    if (winnerTeam == 2)
+                    {
+                        fontColour = "#FF5959";
+                    }
+                    else if (winnerTeam == 3)
+                    {
+                        fontColour = "#00BFFF";
+                    }
+                    else
+                    {
+                        fontColour = "#FFFFFF";
+                    }
+                    WinnerMessage[0] += fontColour;
+                    Listeners.OnTick onTick = new(OnTickHandle);
+                    RegisterListener(onTick);
+                    float showTime = Config.EndGameDelay - 5;
+                    if (showTime < 5)
+                        showTime = 5;
+                    AddTimer(showTime, () =>
+                    {
+                        RemoveListener(onTick);
+                    });
+                }
+                else if (Config.WinnerMessage == 4)
+                {
+                    var playerEntities = GetValidPlayers();
+                    if (playerEntities != null && playerEntities.Any())
+                    {
+                        foreach (var playerController in playerEntities)
+                        {
+                            string part1, part2;
+                            using (new WithTemporaryCulture(playerController.GetLanguage()))
+                            {
+                                part1 = Localizer["winner.is", GGVariables.Instance.GameWinner!.Name];
+                                part2 = Localizer["looser.is", LooserName];
+                            }
+                            DisplayHint(playerController, part1 + " " + part2);
+                        }
+                    }
+                }
+            }
+            try
+            {
+                CoreAPI.RaiseWinnerEvent(playerSlot, victim);
+            }
+            catch (Exception ex)
+            {
+                Server.NextFrame(() =>
+                {
+                    Logger.LogError($"[GunGame API ERROR] RaiseWinnerEvent returned exception: {ex.Message}");
+                });
+            }
+            // Team victories do not count as individual wins in stats.
+            if (!IsTeamplayActive && !(Config.DontAddWinsOnBot && victimPc != null && victimPc.IsValid && victimPc.IsBot))
+            {
+                SavePlayerWins(player);
+            }
+
+            if (Config.WinnerFreezePlayers)
+            {
+                FreezeAllPlayers();
+            }
+            EndMultiplayerGameDelayed();
+
+            /* they're probably letting someone else celebrate their victory here
+                            new result;
+                            Call_StartForward(FwdSoundWinner);
+                            Call_PushCell(client);
+                            Call_Finish(result);
+
+                            if ( !result ) {
+                                UTIL_PlaySoundDelayed(1.7, 0, Winner);
+                            } */
+            PlayConfiguredSound("Winner", 1.7f);
+            //                    PlayRandomSoundDelayed(1.7f, Config.WinnerSound);
+
+            if (Config.AlltalkOnWin)
+            {
+                // Set both: sv_full_alltalk alone does not open team mics in CS2.
+                var sv_full_alltalk = ConVar.Find("sv_full_alltalk");
+                sv_full_alltalk?.SetValue(true);
+                var sv_alltalk = ConVar.Find("sv_alltalk");
+                sv_alltalk?.SetValue(true);
             }
         }
         public void SavePlayerWins(GGPlayer player)
