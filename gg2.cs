@@ -2657,7 +2657,8 @@ namespace GunGame
                 return;
 
             weapon.Clip1 = weaponData.MaxClip1 + 1;// "+1" is needed because ammo is refilling before last shot is counted
-            Utilities.SetStateChanged(weapon.As<CCSWeaponBase>(), "CBasePlayerWeapon", "m_pReserveAmmo");
+            // Notify the clip field actually changed (m_iClip1); notifying m_pReserveAmmo left the client HUD stale.
+            Utilities.SetStateChanged(weapon.As<CCSWeaponBase>(), "CBasePlayerWeapon", "m_iClip1");
         }
         private void CheckForFriendlyFire(GGPlayer player)
         {
@@ -2836,6 +2837,19 @@ namespace GunGame
                 if (Config.MultiLevelBonusSpeed != 1)
                 {
                     playerController.PlayerPawn.Value.VelocityModifier = Config.MultiLevelBonusSpeed;
+                    // m_flVelocityModifier self-recovers to 1.0 within seconds, so a single
+                    // assignment is imperceptible - keep re-applying it while the bonus lasts.
+                    CounterStrikeSharp.API.Modules.Timers.Timer? speedTimer = null;
+                    speedTimer = AddTimer(0.25f, () =>
+                    {
+                        var pc = Utilities.GetPlayerFromSlot(player.Slot);
+                        if (!player.TripleEffects || pc == null || !pc.IsValid || pc.PlayerPawn == null || pc.PlayerPawn.Value == null)
+                        {
+                            speedTimer?.Kill();
+                            return;
+                        }
+                        pc.PlayerPawn.Value.VelocityModifier = Config.MultiLevelBonusSpeed;
+                    }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
                 }
                 var soundData = soundMapper.GetSoundValue("MultiLevel");
 
@@ -3040,7 +3054,9 @@ namespace GunGame
                 }
                 if (Config.MultiLevelBonusSpeed != 0)
                 {
-                    playerController.PlayerPawn.Value.Speed = 1.0f;
+                    // CSS 1.0.371+: CBaseEntity.Speed was removed (CS2 schema change);
+                    // reset via VelocityModifier, the same property used to apply the bonus.
+                    playerController.PlayerPawn.Value.VelocityModifier = 1.0f;
                 }
             }
             if (Config.MultiLevelEffect)
@@ -3752,8 +3768,11 @@ namespace GunGame
 
                     if (Config.AlltalkOnWin)
                     {
+                        // Set both: sv_full_alltalk alone does not open team mics in CS2.
                         var sv_full_alltalk = ConVar.Find("sv_full_alltalk");
                         sv_full_alltalk?.SetValue(true);
+                        var sv_alltalk = ConVar.Find("sv_alltalk");
+                        sv_alltalk?.SetValue(true);
                     }
                     return oldLevel;
                 }
