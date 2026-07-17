@@ -778,7 +778,7 @@ namespace GunGame
             {
                 if (playerController.AuthorizedSteamID != null)
                 {
-                    if (Config.RestoreLevelOnReconnect)
+                    if (Config.RestoreLevelOnReconnect && !IsTeamplayActive)
                     {
                         if (PlayerLevelsBeforeDisconnect.TryGetValue(player.SavedSteamID, out int level))
                         {
@@ -870,7 +870,7 @@ namespace GunGame
             player.LevelRestore = false;
             if (Config.IsPluginEnabled && restoreLevel) //player was not restored in PutInServer
             {
-                if (Config.RestoreLevelOnReconnect)
+                if (Config.RestoreLevelOnReconnect && !IsTeamplayActive)
                 {
                     if (PlayerLevelsBeforeDisconnect.TryGetValue(player.SavedSteamID, out int level))
                     {
@@ -1069,7 +1069,7 @@ namespace GunGame
             }
             if (GGVariables.Instance.IsActive)
             {
-                if (!PlayerLevelsBeforeDisconnect.TryGetValue(player.SavedSteamID, out int existingLevel))
+                if (!IsTeamplayActive && !PlayerLevelsBeforeDisconnect.TryGetValue(player.SavedSteamID, out int existingLevel))
                 {
                     PlayerLevelsBeforeDisconnect[player.SavedSteamID] = (int)player.Level;
                 }
@@ -2192,6 +2192,19 @@ namespace GunGame
                 {
                     if (SkipSpawn.Contains(slot))
                         SkipSpawn.Remove(slot);
+                    if (IsTeamplayActive)
+                    {
+                        // Teamplay: whoever joins T/CT (late join, reconnect or team switch)
+                        // takes the level of that team; the pools stay untouched.
+                        var ts = GGVariables.Instance.GetTeamState(newTeam);
+                        var pl = playerManager.FindBySlot(slot, "EventPlayerTeamHandler");
+                        if (ts != null && pl != null && pl.Level != ts.Level)
+                        {
+                            pl.SetLevel(ts.Level);
+                            pl.CurrentKillsPerWeap = 0;
+                            UpdatePlayerScoreLevel(pl);
+                        }
+                    }
                     AddTimer(0.4f, () =>
                     {
                         if (IsValidPlayer(playerController))
@@ -2303,6 +2316,12 @@ namespace GunGame
             }
             if (GGVariables.Instance.FirstRound)
             {
+                if (IsTeamplayActive)
+                {
+                    // Fresh match after warmup: both team pools and levels start clean.
+                    GGVariables.Instance.TeamT.Reset();
+                    GGVariables.Instance.TeamCT.Reset();
+                }
                 PlayerLevelsBeforeDisconnect.Clear();
                 var playerEntities = GetValidPlayersWithBots();
                 if (playerEntities != null && playerEntities.Count > 0)
@@ -3398,7 +3417,7 @@ namespace GunGame
         }
         private void RecalculateLeader(int slot, int oldLevel, int newLevel = 0)
         {
-            if (newLevel == oldLevel)
+            if (newLevel == oldLevel || IsTeamplayActive) // no individual leader in teamplay
             {
                 return;
             }
@@ -3513,7 +3532,7 @@ namespace GunGame
         }
         private void Timer_HandicapUpdate()
         {
-            if (warmupInitialized || Config.HandicapMode == 0)
+            if (warmupInitialized || Config.HandicapMode == 0 || IsTeamplayActive)
             {
                 return;
             }
@@ -3695,7 +3714,7 @@ namespace GunGame
         }
         private bool GiveHandicapLevel(GGPlayer player, int first = 0)
         {
-            if (Config.HandicapMode == 0)
+            if (Config.HandicapMode == 0 || IsTeamplayActive)
             {
                 return false;
             }
@@ -3742,6 +3761,17 @@ namespace GunGame
         }
         private void ClientSuicide(GGPlayer player, int loose) // how many levels to "loose"
         {
+            if (IsTeamplayActive)
+            {
+                // Teamplay: suicide costs the team pool, not individual levels.
+                var ts = GGVariables.Instance.GetTeamState(player.GetTeam());
+                if (ts != null && loose > 0)
+                {
+                    ts.KillPool = Math.Max(0, ts.KillPool - loose);
+                    TeamplayBroadcast("teamplay.suicide", player.PlayerName, loose);
+                }
+                return;
+            }
             int oldLevel = (int)player.Level;
             int newLevel = ChangeLevel(player, -loose);
             if (oldLevel == newLevel)
@@ -3773,6 +3803,10 @@ namespace GunGame
         }
         private void PrintLeaderToChat(GGPlayer player, int oldLevel, int newLevel)
         {
+            if (IsTeamplayActive) // no individual leader in teamplay
+            {
+                return;
+            }
             if (GGVariables.Instance.CurrentLeader.Slot != player.Slot || newLevel <= oldLevel)
             {
                 return;
