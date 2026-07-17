@@ -1387,6 +1387,30 @@ namespace GunGame
             });
             int Level = (int)client.Level;
             int killsPerLevel = GetCustomKillPerLevel(Level);
+            if (IsTeamplayActive)
+            {
+                if (!playerController.IsBot)
+                {
+                    var ts = GGVariables.Instance.GetTeamState(playerController.TeamNum);
+                    if (ts != null)
+                    {
+                        string teamLevelMsg = client.Translate("your.team.level", ts.Level, GGVariables.Instance.WeaponOrderCount);
+                        if (!Config.ShowSpawnMsgInHintBox)
+                            playerController.PrintToCenter(teamLevelMsg);
+                        else
+                            playerController.PrintToChat(teamLevelMsg);
+                        playerController.PrintToChat(client.Translate("teams.levels",
+                            GGVariables.Instance.TeamT.Level, GGVariables.Instance.TeamCT.Level));
+                        if (Config.MultiKillChat)
+                        {
+                            int left = TeamplayKillsGoal(ts) - ts.KillPool;
+                            if (left > 0)
+                                playerController.PrintToChat(client.Translate("team.kills.toadvance", left));
+                        }
+                    }
+                }
+                return HookResult.Continue;
+            }
             if (!playerController.IsBot)
             {
                 if (!Config.ShowSpawnMsgInHintBox)

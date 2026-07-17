@@ -70,12 +70,14 @@ Puntos clave:
 
 | Componente | Versión actual |
 |---|---|
-| `gg2.cs` (`ModuleVersion`) | **v1.2.2** + fixes locales (ver abajo) |
-| `GG2.csproj` → `CounterStrikeSharp.API` | **1.0.371** (net10.0; era 1.0.367/net8.0 hasta 2026-07-16) |
+| `gg2.cs` (`ModuleVersion`) | **v1.2.4** (merge upstream 2026-07-16) + fixes locales (ver abajo) |
+| `GG2.csproj` → `CounterStrikeSharp.API` | **1.0.371** (net10.0) |
 | Metamod:Source instalado (server local) | 2.0.0 **git1406** (`D:\cs2-server`, actualizado 2026-07-16) |
 | CSS runtime instalado (server local) | **v1.0.371** (.NET 10, with-runtime, actualizado 2026-07-16) |
 
-**Divergencias locales vs upstream v1.2.2 (2026-07-16):** (1) `GG2.csproj` y `GunGameAPI.csproj` a net10.0 + CSS API 1.0.371; (2) `gg2.cs` `StopTripleEffects`: `PlayerPawn.Value.Speed = 1.0f` → `VelocityModifier = 1.0f` (CSS 1.0.371 eliminó `CBaseEntity.Speed` tras cambio de schema de Valve; el bonus se aplica con `VelocityModifier`, el reset ahora usa lo mismo); (3) `gg2.cs` `ReloadActiveWeapon`: `SetStateChanged(..., "m_pReserveAmmo")` → `"m_iClip1"` — el "does not work now" de `ReloadWeapon` era solo notificación al campo equivocado; con el fix, `ReloadWeapon: true` funciona (recarga el cargador al matar). Al actualizar a un upstream nuevo, revisar si ya los arreglaron.
+**Feature local mayor: modo TEAMPLAY (2026-07-16)** — `gg_teamplay` estilo CS 1.6 (AMXX): nivel y pozo de kills compartidos por equipo (meta = req individual × jugadores, mods cuchillo 0.33 / HE 0.50), robo acredita el req individual al pozo, victoria de EQUIPO real vía `TerminateRound`. Config `TeamPlay` 0/1/2 + comando `gg_teamplay` (override en memoria — `LoadConfig` no lo pisa). Región `#region Teamplay` en gg2.cs + branches `IsTeamplayActive`. Candidato a PR upstream.
+
+**Divergencias locales vs upstream v1.2.4 (tras merge 2026-07-16 — upstream ya trae net10/1.0.371/VelocityModifier):** (1) `ReloadActiveWeapon`: `SetStateChanged` a `m_iClip1` en vez de `m_pReserveAmmo` — revive `ReloadWeapon: true` (recarga al matar); (2) `StartTripleEffects`: timer 0.25s re-aplicando `VelocityModifier` mientras dura el bonus multi-nivel (el engine lo recupera a 1.0 solo — con una sola asignación el efecto no se percibe; upstream lo asigna una vez); (3) `AlltalkOnWin`: agrega `sv_alltalk` junto a `sv_full_alltalk`. Candidatos a PR upstream. Al mergear upstream nuevo, verificar que sobrevivan (grep `m_iClip1`, `speedTimer`, `sv_alltalk`).
 
 **Gotchas vividos (2026-07-16, update CS2 build 24209309):**
 - CSS 1.0.370 dejó de cargar SIN error visible — server corría casual puro ("el gungame no está activado"). Síntoma: cero líneas nuevas en `logs/log-all*.txt` tras el boot. Fix: actualizar Metamod snapshot + CSS release en `D:\cs2-stack\` y re-correr `stack-deploy.ps1`.
