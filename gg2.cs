@@ -4592,7 +4592,9 @@ namespace GunGame
             mp_timelimit?.SetValue(0f);
             mp_fraglimit?.SetValue(0);
             mp_maxrounds?.SetValue(0);
-            mp_winlimit?.SetValue(0);
+            // winlimit 1 (not 0): the terminated round win then concludes the match as a
+            // proper team VICTORY instead of "Match Cancelled" on the end-of-match panel.
+            mp_winlimit?.SetValue(1);
 
 
             var mp_ignore_round_win_conditions = ConVar.Find("mp_ignore_round_win_conditions");
