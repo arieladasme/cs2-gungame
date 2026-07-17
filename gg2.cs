@@ -4405,6 +4405,7 @@ namespace GunGame
                 return;
             }
             ts.Level = newLevel;
+            Logger.LogInformation($"[GUNGAME] Teamplay: {(ts.TeamNum == (int)CsTeam.Terrorist ? "T" : "CT")} reached level {newLevel}/{GGVariables.Instance.WeaponOrderCount} (scorer {scorer.PlayerName})");
             ApplyLevelThresholds(newLevel);
 
             var players = GetValidPlayersWithBots();
@@ -4437,6 +4438,7 @@ namespace GunGame
             {
                 Name = TeamplayTeamName(ts.TeamNum)
             };
+            Logger.LogInformation($"[GUNGAME] Teamplay: {(ts.TeamNum == (int)CsTeam.Terrorist ? "T" : "CT")} WINS the match (final kill by {scorer.PlayerName})");
             DeclareWinnerCommon(scorer, victimPc);
         }
         #endregion Teamplay
