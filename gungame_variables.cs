@@ -41,6 +41,13 @@ namespace GunGame.Variables
         public int PlayerOnGrenade { get; set; }
         public int CTcount { get; set; }
         public int Tcount { get; set; }
+        // Teamplay mode: decided per match in InitVariables (covers TeamPlay=2 random).
+        public bool TeamplayActive { get; set; } = false;
+        public TeamState TeamT { get; } = new((int)CsTeam.Terrorist);
+        public TeamState TeamCT { get; } = new((int)CsTeam.CounterTerrorist);
+        public TeamState? GetTeamState(int teamNum) =>
+            teamNum == (int)CsTeam.Terrorist ? TeamT :
+            teamNum == (int)CsTeam.CounterTerrorist ? TeamCT : null;
         public int WeaponsMaxId { get; set; }
         public int WeaponIdSmokegrenade { get; set; }
         public int WeaponIdFlashbang { get; set; }

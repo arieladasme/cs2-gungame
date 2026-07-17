@@ -201,6 +201,10 @@ namespace GunGame
         public PlayerManager playerManager;
         public Dictionary<ulong, int> PlayerLevelsBeforeDisconnect = new();
         public Dictionary<ulong, int> PlayerHandicapTimes = new();
+        // Runtime override set by the gg_teamplay command. Kept outside Config because
+        // RestartGame() -> LoadConfig() re-reads the json from disk and would wipe it.
+        private int? teamplayOverride = null;
+        private bool IsTeamplayActive => GGVariables.Instance.TeamplayActive;
         public List<int> SkipSpawn = new();
         public List<CCSWeaponBaseGun> MapWeaponList = new();
         private CounterStrikeSharp.API.Modules.Timers.Timer? warmupTimer = null;
@@ -1133,6 +1137,13 @@ namespace GunGame
             GGVariables.Instance.FirstRound = false;
 
             GGVariables.Instance.Mp_friendlyfire = ConVar.Find("mp_friendlyfire");
+
+            // Teamplay: decide the mode for this match (2 = random each match, like 1.6).
+            int teamplayMode = teamplayOverride ?? Config.TeamPlay;
+            GGVariables.Instance.TeamplayActive = teamplayMode == 1 || (teamplayMode == 2 && random.Next(2) == 1);
+            GGVariables.Instance.TeamT.Reset();
+            GGVariables.Instance.TeamCT.Reset();
+            Logger.LogInformation($"[GUNGAME] Teamplay {(GGVariables.Instance.TeamplayActive ? "ON" : "OFF")} (mode {teamplayMode})");
 
             PlayerLevelsBeforeDisconnect.Clear();
             MapWeaponList.Clear();
@@ -4647,6 +4658,22 @@ namespace GunGame
             {
                 Console.WriteLine($"Error call gg_respawn with arg {command.GetArg(1)}");
                 Logger.LogError($"Error call gg_respawn with arg {command.GetArg(1)}");
+            }
+        }
+        [ConsoleCommand("gg_teamplay", "Set Teamplay mode: 0 - off, 1 - on, 2 - random each match. Restarts the game.")]
+        [CommandHelper(whoCanExecute: CommandUsage.SERVER_ONLY)]
+        public void OnTeamplayCommand(CCSPlayerController? playerController, CommandInfo command)
+        {
+            if (command.ArgCount < 2) { return; }
+            if (int.TryParse(command.GetArg(1), out int mode) && mode >= 0 && mode <= 2)
+            {
+                teamplayOverride = mode; // consumed by InitVariables on restart; survives LoadConfig()
+                Logger.LogInformation($"[GUNGAME] gg_teamplay {mode} - restarting game");
+                RestartGame();
+            }
+            else
+            {
+                Logger.LogError($"Error call gg_teamplay with arg {command.GetArg(1)} (expected 0, 1 or 2)");
             }
         }
         [ConsoleCommand("gg_distance", "Set Respawn Distance")]

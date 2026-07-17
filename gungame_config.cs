@@ -229,6 +229,23 @@ public class GGConfig
     [JsonPropertyName("RestoreLevelOnReconnect")]
     public bool RestoreLevelOnReconnect { get; set; } = true;
 
+    /**
+    * Teamplay mode (CS 1.6 gg_teamplay): teams level up together, kills of every
+    * member add to the team kill pool. Goal per level = individual kill
+    * requirement x players on the team (see TeamplayMeleeMod / TeamplayNadeMod).
+    * 0 - Off, 1 - On, 2 - Randomly on or off each match.
+    */
+    [JsonPropertyName("TeamPlay")]
+    public int TeamPlay { get; set; } = 0;
+
+    /* Kill goal modifier for the knife level in Teamplay mode (1.6 default 0.33) */
+    [JsonPropertyName("TeamplayMeleeMod")]
+    public double TeamplayMeleeMod { get; set; } = 0.33;
+
+    /* Kill goal modifier for the hegrenade level in Teamplay mode (1.6 default 0.50) */
+    [JsonPropertyName("TeamplayNadeMod")]
+    public double TeamplayNadeMod { get; set; } = 0.5;
+
 /*    public bool? StatsEnabled { get; set; } */
     /**
     * Give random weapon on warmup.

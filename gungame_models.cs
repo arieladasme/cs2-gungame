@@ -136,6 +136,15 @@ namespace GunGame.Models
             Name = winner.PlayerName;
         }
     }
+    // Teamplay mode (CS 1.6 gg_teamplay): one shared level and kill pool per team.
+    public class TeamState
+    {
+        public int TeamNum { get; }            // 2 = T, 3 = CT
+        public int Level { get; set; } = 1;
+        public int KillPool { get; set; } = 0; // kills accumulated towards the current level goal
+        public TeamState(int teamNum) { TeamNum = teamNum; }
+        public void Reset() { Level = 1; KillPool = 0; }
+    }
     public class SpawnInfo
     {
         public Vector Position { get; set; }
