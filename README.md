@@ -38,7 +38,7 @@
 <ul>
     <li>Counter-Strike 2</li>
     <li>Metamod:Source 2.0 build 1401+</li>
-    <li>Counter Strike Sharp v.1.0.367+</li>
+    <li>Counter Strike Sharp v.1.0.369+</li>
 </ul>
 
 <h2>Installation</h2>

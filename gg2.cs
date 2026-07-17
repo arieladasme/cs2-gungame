@@ -53,7 +53,7 @@ namespace GunGame
         public readonly IStringLocalizer<GunGame> _localizer;
         public PlayerLanguageManager playerLanguageManager = new();
         public override string ModuleName => "CS2_GunGame";
-        public override string ModuleVersion => "v1.2.2";
+        public override string ModuleVersion => "v1.2.4";
         public override string ModuleAuthor => "Sergey";
         public override string ModuleDescription => "GunGame mode for CS2";
         public CoreAPI CoreAPI { get; set; } = null!;
@@ -570,6 +570,7 @@ namespace GunGame
         }
         private void SetupWeaponsLevels()
         {
+            WeaponLoaded = false;
             string WeaponLevelsFile = Server.GameDirectory + "/csgo/cfg/" + GGVariables.Instance.ActiveConfigFolder + "/gungame_weapons.json";
             WeaponOrderSettings WeaponSettings;
             try
@@ -598,11 +599,12 @@ namespace GunGame
             GGVariables.Instance.WeaponOrderCount = WeaponSettings.WeaponOrder?.Count ?? 0;
 
             SetCustomKillPerLevel(WeaponSettings.MultipleKillsPerLevel);
+            bool weaponListValid = false;
             if (WeaponSettings.WeaponOrder != null)
             {
-                MakeWeaponList(WeaponSettings.WeaponOrder, WeaponSettings.RandomWeaponReserveLevels, WeaponSettings.RandomWeaponOrder);
+                weaponListValid = MakeWeaponList(WeaponSettings.WeaponOrder, WeaponSettings.RandomWeaponReserveLevels, WeaponSettings.RandomWeaponOrder);
             }
-            if (GGVariables.Instance.weaponsList.Count > 0)
+            if (weaponListValid)
                 WeaponLoaded = true;
         }
         private static void SetCustomKillPerLevel(Dictionary<int, int> multipleKillsPerLevel)
@@ -619,9 +621,10 @@ namespace GunGame
                 }
             }
         }
-        private void MakeWeaponList(Dictionary<int, string> weaponOrder, string randomWeaponReserveLevels, bool randomOrder)
+        private bool MakeWeaponList(Dictionary<int, string> weaponOrder, string randomWeaponReserveLevels, bool randomOrder)
         {
             List<string> result = new();
+            bool hasErrors = false;
 
             if (randomOrder)
             {
@@ -630,20 +633,43 @@ namespace GunGame
             else
             {
                 // Use the original order
-                int i = 1;
-                foreach (var kvp in weaponOrder)
+                for (int level = 1; level <= GGVariables.Instance.WeaponOrderCount; level++)
                 {
-                    result.Add(weaponOrder[i++]);
+                    if (weaponOrder.TryGetValue(level, out var weaponName))
+                    {
+                        result.Add(weaponName);
+                    }
+                    else
+                    {
+                        Logger.LogError($"[ERROR] Weapon order is missing level {level} in gungame_weapons.json");
+                        result.Add("");
+                        hasErrors = true;
+                    }
                 }
             }
 
             for (int i = 0; i < GGVariables.Instance.WeaponOrderCount; i++)
             {
+                int level = i + 1;
+                if (i >= result.Count || string.IsNullOrWhiteSpace(result[i]))
+                {
+                    Logger.LogError($"[ERROR] Weapon order level {level} is empty in gungame_weapons.json");
+                    hasErrors = true;
+                    continue;
+                }
+
                 if (TryGetWeaponInfo(result[i], out WeaponInfo weaponInfo))
                 {
+                    if (string.IsNullOrWhiteSpace(weaponInfo.FullName) && weaponInfo.LevelIndex != SpecialWeapon.KnifeLevelIndex)
+                    {
+                        Logger.LogError($"[ERROR] Weapon '{result[i]}' at level {level} has an empty fullname in weapons.json");
+                        hasErrors = true;
+                        continue;
+                    }
+
                     GGVariables.Instance.weaponsList.Add(new Weapon
                     {
-                        Level = i + 1,
+                        Level = level,
                         Name = result[i],
                         FullName = weaponInfo.FullName,
                         Index = weaponInfo.Index,
@@ -653,7 +679,20 @@ namespace GunGame
                         Ammo = weaponInfo.AmmoType
                     });
                 }
+                else
+                {
+                    Logger.LogError($"[ERROR] Weapon order level {level} references unknown weapon '{result[i]}'. Check weapons.json");
+                    hasErrors = true;
+                }
             }
+
+            if (GGVariables.Instance.weaponsList.Count != GGVariables.Instance.WeaponOrderCount)
+            {
+                Logger.LogError($"[ERROR] Weapon order has {GGVariables.Instance.weaponsList.Count} valid levels out of {GGVariables.Instance.WeaponOrderCount}");
+                hasErrors = true;
+            }
+
+            return !hasErrors && GGVariables.Instance.weaponsList.Count == GGVariables.Instance.WeaponOrderCount;
         }
         static List<string> RandomizeWeaponOrder(Dictionary<int, string> weaponOrder, string reserveLevels)
         {
@@ -749,8 +788,9 @@ namespace GunGame
                         }
                     }
                     UpdatePlayerScoreLevel(player);
-                    if (statsManager != null)
-                        dbQueue.EnqueueOperation(async () => await statsManager.GetPlayerWins(player));
+                    player.LevelRestore = false;
+                    CancelAuthorisationRetry(player);
+                    QueuePlayerStatsLoad(player);
                 }
                 else
                 {
@@ -778,18 +818,36 @@ namespace GunGame
             if (playerController.AuthorizedSteamID == null)
             {
                 Logger.LogInformation($"{playerController.PlayerName} has AuthorizedSteamID - null");
+                if (player.AuthorisationRetryTimer is not null)
+                {
+                    return;
+                }
                 if (++player.IdAttempts > 5)
                 {
                     Logger.LogInformation($"{player.PlayerName} kicked because of 6 of unsuccessful authorisation attempts.");
                     Server.ExecuteCommand($"kickid {slot} NoSteamId");
                     return;
                 }
-                AddTimer(5.0f, () =>
+                player.AuthorisationRetryTimer = AddTimer(5.0f, () =>
                 {
+                    player.AuthorisationRetryTimer = null;
+                    if (!playerManager.IsCurrentPlayer(slot, player))
+                    {
+                        return;
+                    }
+
+                    var retryPlayerController = Utilities.GetPlayerFromSlot(slot);
+                    if (retryPlayerController == null || !retryPlayerController.IsValid || retryPlayerController.SteamID != id.SteamId64)
+                    {
+                        return;
+                    }
+
                     OnClientAuthorized(slot, id);
-                });
+                }, TimerFlags.STOP_ON_MAPCHANGE);
                 return;
             }
+            CancelAuthorisationRetry(player);
+            player.IdAttempts = 0;
             if (player.SavedSteamID != playerController.AuthorizedSteamID.SteamId64)
             {
                 player.UpdatePlayerController(playerController);
@@ -804,7 +862,9 @@ namespace GunGame
             {
                 Logger.LogInformation($"[GUNGAME]* OnClientPutInServer: bad player IP {player.PlayerName} {playerIP}");
             }
-            if (Config.IsPluginEnabled && player.LevelRestore) //player was not restored in PutInServer
+            bool restoreLevel = player.LevelRestore;
+            player.LevelRestore = false;
+            if (Config.IsPluginEnabled && restoreLevel) //player was not restored in PutInServer
             {
                 if (Config.RestoreLevelOnReconnect)
                 {
@@ -820,9 +880,24 @@ namespace GunGame
                     }
                 }
                 UpdatePlayerScoreLevel(player);
-                if (statsManager != null)
-                    dbQueue.EnqueueOperation(async () => await statsManager.GetPlayerWins(player));
+                QueuePlayerStatsLoad(player);
             }
+        }
+        private void QueuePlayerStatsLoad(GGPlayer player)
+        {
+            var stats = statsManager;
+            if (stats == null || !player.TryQueueStatsLoad(player.SavedSteamID))
+            {
+                return;
+            }
+
+            dbQueue.EnqueueOperation(() => stats.GetPlayerWins(player));
+        }
+        private static void CancelAuthorisationRetry(GGPlayer player)
+        {
+            var retryTimer = player.AuthorisationRetryTimer;
+            player.AuthorisationRetryTimer = null;
+            retryTimer?.Kill();
         }
         private void OnMapStart(string name)
         {
@@ -975,7 +1050,12 @@ namespace GunGame
         private void OnClientDisconnect(int slot)
         {
             var player = playerManager.FindBySlot(slot, "OnClientDisconnect");
-            if (player == null || !player.PutInServer)
+            if (player == null)
+            {
+                return;
+            }
+            CancelAuthorisationRetry(player);
+            if (!player.PutInServer)
             {
                 return;
             }
@@ -1183,6 +1263,10 @@ namespace GunGame
             {
                 return HookResult.Continue;
             }
+            if (@event == null || @event.Userid == null)
+            {
+                return HookResult.Continue;
+            }
             var playerController = @event.Userid;
             if (playerController == null || !IsValidPlayer(playerController) || !IsClientInTeam(playerController))
             {
@@ -1199,11 +1283,10 @@ namespace GunGame
             {
                 AddTimer(0.3f, () =>
                 {
-                    if (playerController != null && playerController.IsValid
-                        && playerController.PlayerPawn != null && playerController.PlayerPawn.Value != null)
+                    if (TryGetPlayerPawn(playerController, out var pawn))
                     {
-                        var angles = playerController.PlayerPawn.Value?.EyeAngles;
-                        var origin = playerController.PlayerPawn.Value?.CBodyComponent?.SceneNode?.AbsOrigin;
+                        var angles = pawn.EyeAngles;
+                        var origin = pawn.CBodyComponent?.SceneNode?.AbsOrigin;
 
                         client.Angles = new QAngle(
                             x: angles?.X,
@@ -1378,8 +1461,14 @@ namespace GunGame
                     UpdatePlayerScoreLevel(Killer);
                     if (Config.AfkManagement)
                     {
-                        var angles = VictimController.PlayerPawn.Value?.EyeAngles;
-                        var origin = VictimController.PlayerPawn.Value?.CBodyComponent?.SceneNode?.AbsOrigin;
+                        QAngle? angles = null;
+                        Vector? origin = null;
+                        if (TryGetPlayerPawn(VictimController, out var victimPawn))
+                        {
+                            angles = victimPawn.EyeAngles;
+                            origin = victimPawn.CBodyComponent?.SceneNode?.AbsOrigin;
+                        }
+
                         if (Victim.Angles != null && Victim.Origin != null && angles != null && origin != null
                             && Victim.Angles.X == angles.X && Victim.Angles.Y == angles.Y
                             && Victim.Origin.X == origin.X && Victim.Origin.Y == origin.Y)
@@ -1397,7 +1486,10 @@ namespace GunGame
                                 else if (Config.AfkAction == 2)
                                 {
                                     VictimController.ChangeTeam(CsTeam.Spectator);
-                                    VictimController.PlayerPawn.Value?.CommitSuicide(false, true);
+                                    if (victimPawn != null && victimPawn.IsValid)
+                                    {
+                                        victimPawn.CommitSuicide(false, true);
+                                    }
                                     Victim.AfkCount = 0;
                                     //                            Respawn(VictimController, false);
                                 }
@@ -1618,10 +1710,17 @@ namespace GunGame
                 }
             }
             level = (int)Killer.Level;
+            var killerLevelWeapon = Killer.LevelWeapon;
+            if (killerLevelWeapon == null)
+            {
+                Logger.LogError($"[ERROR] EventPlayerDeathHandler: killer slot {Killer.Slot} has no level weapon for level {Killer.Level}");
+                Respawn(VictimController);
+                return HookResult.Continue;
+            }
 
             /* Give them another grenade if they killed another person with another weapon */
-            if ((Killer.LevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)  //киллер на гранате
-                && (usedWeaponInfo.LevelIndex != SpecialWeapon.HegrenadeLevelIndex)   // а убил не гранатой
+            if ((killerLevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)  // killer is on grenade level
+                && (usedWeaponInfo.LevelIndex != SpecialWeapon.HegrenadeLevelIndex)   // but did not kill with a grenade
                 && !((usedWeaponInfo.LevelIndex == SpecialWeapon.KnifeLevelIndex) && Config.KnifeProHE) // TODO: Remove this statement and make check if killer not leveled up, than give extra nade.
             )
             {
@@ -1630,7 +1729,7 @@ namespace GunGame
             }
 
             /* Give them another taser if they killed another person with another weapon */
-            if ((Killer.LevelWeapon.LevelIndex == SpecialWeapon.TaserLevelIndex)
+            if ((killerLevelWeapon.LevelIndex == SpecialWeapon.TaserLevelIndex)
                 && (usedWeaponInfo.LevelIndex != SpecialWeapon.TaserLevelIndex)
                 && Config.ExtraTaserOnKill)
             {
@@ -1638,12 +1737,12 @@ namespace GunGame
             }
 
             /* Give them another molotov if they killed another person with another weapon */
-            if (Killer.LevelWeapon.LevelIndex == SpecialWeapon.MolotovLevelIndex)
+            if (killerLevelWeapon.LevelIndex == SpecialWeapon.MolotovLevelIndex)
             {
                 if (usedWeaponInfo.LevelIndex != SpecialWeapon.MolotovLevelIndex
                     && Config.ExtraMolotovForKill)
                 {
-                    GiveExtraMolotov(KillerController, Killer.LevelWeapon.Index);
+                    GiveExtraMolotov(KillerController, killerLevelWeapon.Index);
                 }
             }
 
@@ -1721,24 +1820,24 @@ namespace GunGame
                 }
                 /************  these conditions are used to decide whether the level should be raised or not (before this, the victim’s level was subtracted) *************/
                 // if on a knife and you need to go through more than one knife
-                if (follow && Killer.LevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex && killsPerLevel > 1)
+                if (follow && killerLevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex && killsPerLevel > 1)
                 {
                     follow = false;
                 }
                 // you can't pass a grenade with a knife
-                if (follow && !Config.KnifeProHE && Killer.LevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
+                if (follow && !Config.KnifeProHE && killerLevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
                 {
                     Respawn(VictimController);
                     return HookResult.Continue;
                 }
                 // you can't pass the taser with a knife
-                if (follow && Killer.LevelWeapon.LevelIndex == SpecialWeapon.TaserLevelIndex)
+                if (follow && killerLevelWeapon.LevelIndex == SpecialWeapon.TaserLevelIndex)
                 {
                     Respawn(VictimController);
                     return HookResult.Continue;
                 }
                 // You can't get past Molotov with a knife
-                if (follow && Killer.LevelWeapon.LevelIndex == SpecialWeapon.MolotovLevelIndex &&
+                if (follow && killerLevelWeapon.LevelIndex == SpecialWeapon.MolotovLevelIndex &&
                     (usedWeaponInfo.LevelIndex != SpecialWeapon.MolotovLevelIndex ||
                     (usedWeaponInfo.LevelIndex == SpecialWeapon.MolotovLevelIndex && killsPerLevel > 1)))
                 {
@@ -1780,14 +1879,14 @@ namespace GunGame
             }
 
             /* They didn't kill with the weapon required */
-            if (usedWeaponInfo.LevelIndex != Killer.LevelWeapon.LevelIndex)
+            if (usedWeaponInfo.LevelIndex != killerLevelWeapon.LevelIndex)
             {
                 if (usedWeaponInfo.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
                 {
                     // Killed with grenade made by map author
                     if (Config.CanLevelUpWithMapNades
                         && (Config.CanLevelUpWithNadeOnKnife
-                            || !(Killer.LevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex)))
+                            || !(killerLevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex)))
                     {
                         LevelUpWithPhysics = true;
                     }
@@ -1808,9 +1907,9 @@ namespace GunGame
                         Config.CanLevelUpWithPhysics
                         && (weapon_used == "prop_physics") || (weapon_used == "prop_physics_multiplayer")
                         && (
-                            ((Killer.LevelWeapon.LevelIndex != SpecialWeapon.HegrenadeLevelIndex) && !(Killer.LevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex))
-                            || (Config.CanLevelUpWithPhysicsOnGrenade && (Killer.LevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex))
-                            || (Config.CanLevelUpWithPhysicsOnKnife && (Killer.LevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex))))
+                            ((killerLevelWeapon.LevelIndex != SpecialWeapon.HegrenadeLevelIndex) && !(killerLevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex))
+                            || (Config.CanLevelUpWithPhysicsOnGrenade && (killerLevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex))
+                            || (Config.CanLevelUpWithPhysicsOnKnife && (killerLevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex))))
                     {
                         LevelUpWithPhysics = true;
                     }
@@ -1948,10 +2047,10 @@ namespace GunGame
                 {
                     if (g_Shot[attacker.Slot, victim.Slot])
                     {
-                        if (attacker.PlayerPawn != null && attacker.PlayerPawn.Value != null
-                        && attacker.PlayerPawn.Value.WeaponServices != null)
+                        if (TryGetPlayerPawn(attacker, out var attackerPawn)
+                        && attackerPawn.WeaponServices != null)
                         {
-                            foreach (var clientWeapon in attacker.PlayerPawn.Value.WeaponServices.MyWeapons)
+                            foreach (var clientWeapon in attackerPawn.WeaponServices.MyWeapons)
                             {
                                 if (clientWeapon is { IsValid: true, Value.IsValid: true })
                                 {
@@ -1969,9 +2068,9 @@ namespace GunGame
                             if (found) // punish him for shoot and knife
                             {
                                 //                                attacker.PlayerPawn.Value.Render = Color.FromArgb(255, 255, 0, 0);
-                                if (victim.PlayerPawn != null && victim.PlayerPawn.Value != null)
+                                if (TryGetPlayerPawn(victim, out var victimPawn))
                                 {
-                                    victim.PlayerPawn.Value.Health += eventInfo.DmgHealth;
+                                    victimPawn.Health += eventInfo.DmgHealth;
                                 }
                                 AddTimer(0.2f, () =>
                                 {
@@ -2249,7 +2348,7 @@ namespace GunGame
                     {
                         return HookResult.Continue;
                     }
-                    playerController.GiveNamedItem(he.FullName);
+                    TryGiveNamedItem(playerController, he.FullName, "EventHegrenadeDetonateHandler");
                 }
             }
             return HookResult.Continue;
@@ -2309,13 +2408,113 @@ namespace GunGame
         /************** Utils **********************************************************/
         /************** Utils **********************************************************/
         /************** Utils **********************************************************/
+        public bool TryGetPlayerPawn(CCSPlayerController? playerController, out CCSPlayerPawn playerPawn)
+        {
+            playerPawn = null!;
+
+            if (playerController == null || !IsValidPlayer(playerController))
+            {
+                return false;
+            }
+
+            CHandle<CCSPlayerPawn> pawnHandle;
+            try
+            {
+                pawnHandle = playerController.PlayerPawn;
+            }
+            catch (ArgumentNullException)
+            {
+                return false;
+            }
+
+            var pawnValue = pawnHandle?.Value;
+            if (pawnHandle == null || !pawnHandle.IsValid || pawnValue == null || !pawnValue.IsValid)
+            {
+                return false;
+            }
+
+            playerPawn = pawnValue;
+            return true;
+        }
+
+        public bool TryGetAlivePlayerPawn(CCSPlayerController? playerController, out CCSPlayerPawn playerPawn)
+        {
+            if (!TryGetPlayerPawn(playerController, out playerPawn))
+            {
+                return false;
+            }
+
+            return playerPawn.LifeState == (byte)LifeState_t.LIFE_ALIVE;
+        }
+
+        private bool TryGetItemServices(CCSPlayerController? playerController, out CCSPlayer_ItemServices itemServices, string source)
+        {
+            itemServices = null!;
+            if (playerController == null || !TryGetPlayerPawn(playerController, out var playerPawn))
+            {
+                return false;
+            }
+
+            itemServices = playerPawn.ItemServices?.As<CCSPlayer_ItemServices>()!;
+            if (itemServices == null || itemServices.Handle == IntPtr.Zero)
+            {
+                Logger.LogError($"[ERROR] {source}: player slot {playerController.Slot} has no valid item services");
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool TryGiveNamedItem(CCSPlayerController? playerController, string itemName, string source)
+        {
+            if (string.IsNullOrWhiteSpace(itemName))
+            {
+                Logger.LogError($"[ERROR] {source}: cannot give an empty item name");
+                return false;
+            }
+
+            if (!TryGetItemServices(playerController, out var itemServices, source))
+            {
+                return false;
+            }
+
+            try
+            {
+                itemServices.GiveNamedItem<CEntityInstance>(itemName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[ERROR] {source}: cannot give {itemName}: {ex.Message}");
+                return false;
+            }
+        }
+
+        private bool TryRemoveWeapons(CCSPlayerController? playerController, string source)
+        {
+            if (!TryGetItemServices(playerController, out var itemServices, source))
+            {
+                return false;
+            }
+
+            try
+            {
+                itemServices.RemoveWeapons();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[ERROR] {source}: cannot remove weapons: {ex.Message}");
+                return false;
+            }
+        }
+
         private void GiveWarmUpWeaponDelayed(float delay, int slot)
         {
             AddTimer(delay, () =>
             {
                 var playerController = Utilities.GetPlayerFromSlot(slot);
-                if (playerController != null && IsValidPlayer(playerController) && playerController.Pawn != null &&
-                playerController.Pawn.Value != null && playerController.Pawn.Value.LifeState == (byte)LifeState_t.LIFE_ALIVE)
+                if (TryGetAlivePlayerPawn(playerController, out _))
                 {
                     var player = playerManager.FindBySlot(slot, "GiveWarmUpWeaponDelayed");
                     if (player == null)
@@ -2341,25 +2540,29 @@ namespace GunGame
                     }
                     try
                     {
-                        playerController.RemoveWeapons();
+                        if (!TryRemoveWeapons(playerController, "GiveWarmUpWeaponDelayed"))
+                        {
+                            return;
+                        }
                     }
                     catch (Exception ex)
                     {
                         Server.NextFrame(() =>
                         {
-                            Logger.LogError($"[GunGame ERROR] Problem with RemoveWeapon: {ex.Message}");
+                            Logger.LogError($"[GunGame ERROR] Cannot remove warm-up weapons: {ex.Message}");
                         });
+                        return;
                     }
 
-                    if (Config.ArmorKevlarHelmet) playerController.GiveNamedItem("item_assaultsuit");
-                    playerController.GiveNamedItem("weapon_knife");
+                    if (Config.ArmorKevlarHelmet) TryGiveNamedItem(playerController, "item_assaultsuit", "GiveWarmUpWeaponDelayed");
+                    TryGiveNamedItem(playerController, "weapon_knife", "GiveWarmUpWeaponDelayed");
                     if (nades)
                     {
-                        playerController.GiveNamedItem("weapon_hegrenade");
+                        TryGiveNamedItem(playerController, "weapon_hegrenade", "GiveWarmUpWeaponDelayed");
                     }
                     if (wpn)
                     {
-                        playerController.GiveNamedItem("weapon_" + Config.WarmupWeapon);
+                        TryGiveNamedItem(playerController, "weapon_" + Config.WarmupWeapon, "GiveWarmUpWeaponDelayed");
                     }
                     if (!nades && !wpn)
                     {
@@ -2376,24 +2579,66 @@ namespace GunGame
         public void GiveNextWeapon(int slot, bool levelupWithKnife = false, bool spawn = false)
         {
             var playerController = Utilities.GetPlayerFromSlot(slot);
-            if (playerController == null || !IsValidPlayer(playerController) || !IsClientInTeam(playerController) ||
-                playerController.Pawn == null || playerController.Pawn.Value == null ||
-                playerController.Pawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE)
+            if (playerController == null || !TryGetAlivePlayerPawn(playerController, out var playerPawn) || !IsClientInTeam(playerController))
             {
                 return;
             }
 
-            playerController.RemoveWeapons();
-
-            if (Config.ArmorKevlarHelmet) playerController.GiveNamedItem("item_assaultsuit");
-            bool dropKnife;
             var player = playerManager.FindBySlot(slot, "GiveNextWeapon");
             if (player == null)
             {
-                Logger.LogError($"[ERROR] GiveNextWeapon: cant get player for slot {slot}");
+                Logger.LogError($"[ERROR] GiveNextWeapon: cannot get player for slot {slot}");
                 return;
             }
-            if (player.LevelWeapon.LevelIndex == SpecialWeapon.Drop_knife)
+
+            var levelWeapon = player.LevelWeapon;
+            if (levelWeapon == null)
+            {
+                Logger.LogError($"[ERROR] GiveNextWeapon: player slot {slot} has no level weapon for level {player.Level}");
+                return;
+            }
+
+            var itemServices = playerPawn.ItemServices?.As<CCSPlayer_ItemServices>();
+            if (itemServices == null || itemServices.Handle == IntPtr.Zero)
+            {
+                Logger.LogError($"[ERROR] GiveNextWeapon: player slot {slot} has no valid item services");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(levelWeapon.FullName) && levelWeapon.LevelIndex != SpecialWeapon.KnifeLevelIndex)
+            {
+                Logger.LogError($"[ERROR] GiveNextWeapon: player slot {slot} has empty weapon name for level {player.Level}. Check gungame_weapons.json level {player.Level} and weapons.json");
+                return;
+            }
+
+            void GiveNamedItem(string itemName)
+            {
+                if (!string.IsNullOrWhiteSpace(itemName))
+                {
+                    try
+                    {
+                        itemServices.GiveNamedItem<CEntityInstance>(itemName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError($"[ERROR] GiveNextWeapon: cannot give {itemName}: {ex.Message}");
+                    }
+                }
+            }
+
+            try
+            {
+                itemServices.RemoveWeapons();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[ERROR] GiveNextWeapon: cannot remove weapons: {ex.Message}");
+                return;
+            }
+
+            if (Config.ArmorKevlarHelmet) GiveNamedItem("item_assaultsuit");
+            bool dropKnife;
+            if (levelWeapon.LevelIndex == SpecialWeapon.Drop_knife)
             {
                 dropKnife = true;
             }
@@ -2408,9 +2653,9 @@ namespace GunGame
             //            }
             CheckForFriendlyFire(player);
 
-            if (player.LevelWeapon.LevelIndex != SpecialWeapon.Drop_knife)
+            if (levelWeapon.LevelIndex != SpecialWeapon.Drop_knife)
             {
-                playerController.GiveNamedItem("weapon_knife");
+                GiveNamedItem("weapon_knife");
             }
 
             /*            if (player.State.HasFlag(PlayerStates.KnifeElite)) { // FIXME: when do we call UTIL_GiveNextWeapon with KNIFE_ELITE flag set in PlayerState?
@@ -2422,18 +2667,18 @@ namespace GunGame
                             return;
                         } */
 
-            if (player.LevelWeapon.Slot == 4)  // grenades slot
+            if (levelWeapon.Slot == 4)  // grenades slot
             {
-                if (player.LevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
+                if (levelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
                 {
                     // BONUS WEAPONS FOR HEGRENADE
                     if (Config.NumberOfNades > 0)
                     {
                         player.NumberOfNades = Config.NumberOfNades - 1;
                     }
-                    if (Config.NadeBonusWeapon.Length > 0) // на гранате дают оружие
+                    if (!string.IsNullOrEmpty(Config.NadeBonusWeapon)) // give a bonus weapon on grenade level
                     {
-                        playerController.GiveNamedItem("weapon_" + Config.NadeBonusWeapon);
+                        GiveNamedItem("weapon_" + Config.NadeBonusWeapon);
                         //                        int ent = GivePlayerItemWrapper(player, "weapon_" + Plugin.Config.NadeBonusWeapon);
                         /* *******************  we don’t use it, then add it - remove additional ammunition from weapons
 
@@ -2453,19 +2698,19 @@ namespace GunGame
                     }
                     if (Config.NadeSmoke)
                     {
-                        playerController.GiveNamedItem("weapon_smokegrenade");
+                        GiveNamedItem("weapon_smokegrenade");
                     }
                     if (Config.NadeFlash)
                     {
-                        playerController.GiveNamedItem("weapon_flashbang");
+                        GiveNamedItem("weapon_flashbang");
                     }
                 }
-                else if (player.LevelWeapon.LevelIndex == SpecialWeapon.MolotovLevelIndex)
+                else if (levelWeapon.LevelIndex == SpecialWeapon.MolotovLevelIndex)
                 {
                     // BONUS WEAPONS FOR MOLOTOV
-                    if (Config.MolotovBonusWeapon.Length > 0)
+                    if (!string.IsNullOrEmpty(Config.MolotovBonusWeapon))
                     {
-                        playerController.GiveNamedItem("weapon_" + Config.MolotovBonusWeapon);
+                        GiveNamedItem("weapon_" + Config.MolotovBonusWeapon);
                         //                        int ent = GivePlayerItemWrapper(player, "weapon_" + Plugin.Config.MolotovBonusWeapon);
                         /* *******************  we don’t use it, then add it - remove additional ammunition from weapons
                                                 // Remove bonus weapon ammo! So player can not reload weapon!
@@ -2484,27 +2729,27 @@ namespace GunGame
                     }
                     if (Config.MolotovBonusSmoke)
                     {
-                        playerController.GiveNamedItem("weapon_smokegrenade");
+                        GiveNamedItem("weapon_smokegrenade");
                     }
                     if (Config.MolotovBonusFlash)
                     {
-                        playerController.GiveNamedItem("weapon_flashbang");
+                        GiveNamedItem("weapon_flashbang");
                     }
                 }
             }
 
-            if (player.LevelWeapon.Slot == 3)  // knife slot
+            if (levelWeapon.Slot == 3)  // knife slot
             {
-                if (player.LevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex)
+                if (levelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex)
                 {
                     // BONUS WEAPONS FOR KNIFE
                     if (Config.KnifeSmoke)
                     {
-                        playerController.GiveNamedItem("weapon_smokegrenade");
+                        GiveNamedItem("weapon_smokegrenade");
                     }
                     if (Config.KnifeFlash)
                     {
-                        playerController.GiveNamedItem("weapon_flashbang");
+                        GiveNamedItem("weapon_flashbang");
                     }
                     if (dropKnife)
                     {
@@ -2515,18 +2760,13 @@ namespace GunGame
                         //                            playerController.GiveNamedItem("weapon_knife");
                         //                        }
                         player.UseWeapon(3);
-                        // Change Color of Knife to Gold. - it doesn't work now
+                        // Change knife colour to gold. It does not work now
                         if (player.Level == GGVariables.Instance.WeaponOrderCount) // on the last level
                         {
-                            if (playerController.PlayerPawn != null && playerController.PlayerPawn.Value != null
-                                && playerController.PlayerPawn.Value.WeaponServices != null
-                                && playerController.PlayerPawn.Value.WeaponServices.ActiveWeapon != null)
+                            var activeWeapon = playerPawn.WeaponServices?.ActiveWeapon?.Value;
+                            if (activeWeapon != null && activeWeapon.IsValid)
                             {
-                                var activeWeapon = playerController.PlayerPawn.Value.WeaponServices?.ActiveWeapon.Value;
-                                if (activeWeapon != null)
-                                {
-                                    activeWeapon.Render = Color.FromArgb(255, 223, 0);
-                                }
+                                activeWeapon.Render = Color.FromArgb(255, 223, 0);
                             }
                         }
                     }
@@ -2536,14 +2776,14 @@ namespace GunGame
                     // LEVEL WEAPON TASER
                     if (Config.TaserSmoke)
                     {
-                        playerController.GiveNamedItem("weapon_smokegrenade");
+                        GiveNamedItem("weapon_smokegrenade");
                     }
                     if (Config.TaserFlash)
                     {
-                        playerController.GiveNamedItem("weapon_flashbang");
+                        GiveNamedItem("weapon_flashbang");
                         //                        GivePlayerItemWrapper(player, "weapon_flashbang", !player.BlockSwitch);
                     }
-                    playerController.GiveNamedItem(player.LevelWeapon.FullName);
+                    GiveNamedItem(levelWeapon.FullName);
                 }
                 player.UseWeapon(3);
             }
@@ -2551,10 +2791,10 @@ namespace GunGame
             {
                 // LEVEL WEAPON PRIMARY/SECONDARY
                 /* Give new weapon */
-                playerController.GiveNamedItem(player.LevelWeapon.FullName);
-                if (Config.FastSwitchOnLevelUp && !GGVariables.Instance.WeaponsSkipFastSwitch.Contains(player.LevelWeapon.FullName))
+                GiveNamedItem(levelWeapon.FullName);
+                if (Config.FastSwitchOnLevelUp && !GGVariables.Instance.WeaponsSkipFastSwitch.Contains(levelWeapon.FullName))
                 {
-                    var weapon = playerController.PlayerPawn?.Value?.WeaponServices?.ActiveWeapon?.Value;
+                    var weapon = playerPawn.WeaponServices?.ActiveWeapon?.Value;
                     if (weapon != null && weapon.IsValid)
                     {
                         var wep = new CCSWeaponBase(weapon.Handle);
@@ -2570,7 +2810,7 @@ namespace GunGame
                 }
             }
 
-            if (player.LevelWeapon.Slot == 4)  // grenades slot
+            if (levelWeapon.Slot == 4)  // grenades slot
             {
                 player.UseWeapon(4);
             }
@@ -2590,7 +2830,7 @@ namespace GunGame
                 /* Do not give them another nade if they already have one */
                 if (!HasWeapon(player, "weapon_hegrenade"))
                 {
-                    player.GiveNamedItem("weapon_hegrenade");
+                    TryGiveNamedItem(player, "weapon_hegrenade", "GiveExtraNade");
                     /*                    GivePlayerItemWrapper(player, "weapon_hegrenade", Plugin.Config.BlockWeaponSwitchOnNade);
                       Here about the switching lock. Let's put it aside for now
                                         if (!blockWeapSwitch) {
@@ -2604,10 +2844,9 @@ namespace GunGame
         {
             if (HasWeapon(player, "weapon_taser"))
             {
-                if (IsValidPlayer(player) && player.PlayerPawn != null && player.PlayerPawn.Value != null
-                && player.PlayerPawn.Value.WeaponServices != null)
+                if (TryGetPlayerPawn(player, out var pawn) && pawn.WeaponServices != null)
                 {
-                    foreach (var clientWeapon in player.PlayerPawn.Value.WeaponServices.MyWeapons)
+                    foreach (var clientWeapon in pawn.WeaponServices.MyWeapons)
                     {
                         if (clientWeapon is { IsValid: true, Value.IsValid: true })
                         {
@@ -2623,7 +2862,7 @@ namespace GunGame
             }
             else
             {
-                player.GiveNamedItem("weapon_taser");
+                TryGiveNamedItem(player, "weapon_taser", "GiveExtraTaser");
             }
         }
         private void GiveExtraMolotov(CCSPlayerController player, int weapon_index)
@@ -2631,14 +2870,14 @@ namespace GunGame
             if (!HasWeapon(player, "weapon_molotov"))
             {
                 RemoveGrenades(player);
-                player.GiveNamedItem("weapon_molotov");
+                TryGiveNamedItem(player, "weapon_molotov", "GiveExtraMolotov");
                 if (Config.MolotovBonusSmoke)
                 {
-                    player.GiveNamedItem("weapon_smokegrenade");
+                    TryGiveNamedItem(player, "weapon_smokegrenade", "GiveExtraMolotov");
                 }
                 if (Config.MolotovBonusFlash)
                 {
-                    player.GiveNamedItem("weapon_flashbang");
+                    TryGiveNamedItem(player, "weapon_flashbang", "GiveExtraMolotov");
                 }
             }
             /*            else
@@ -2646,9 +2885,12 @@ namespace GunGame
                             Logger.LogInformation($"Can't give GiveExtraMolotov to {player.PlayerName} for kill by another weapon, he has the molotov already");
                         } */
         }
-        private static void ReloadActiveWeapon(CCSPlayerController player)
+        private void ReloadActiveWeapon(CCSPlayerController player)
         {
-            var weapon = player.PlayerPawn?.Value?.WeaponServices?.ActiveWeapon?.Value?.As<CCSWeaponBaseGun>();
+            if (!TryGetPlayerPawn(player, out var playerPawn))
+                return;
+
+            var weapon = playerPawn.WeaponServices?.ActiveWeapon?.Value?.As<CCSWeaponBaseGun>();
             if (weapon == null || !weapon.IsValid)
                 return;
 
@@ -2773,15 +3015,16 @@ namespace GunGame
         }
         private void FreezePlayer(CCSPlayerController player)
         {
-            if (IsValidPlayer(player) && player.PlayerPawn != null && player.PlayerPawn.Value != null
-            && (player.TeamNum > 1))
+            if (!TryGetPlayerPawn(player, out var pawn) || player.TeamNum <= 1)
             {
-                player.PlayerPawn.Value.MoveType = MoveType_t.MOVETYPE_NONE;
-                Schema.SetSchemaValue(player.PlayerPawn.Value.Handle, "CBaseEntity", "m_nActualMoveType", 0);
-                Utilities.SetStateChanged(player.PlayerPawn.Value, "CBaseEntity", "m_MoveType");
-                player.RemoveWeapons();
-                player.GiveNamedItem("weapon_knife");
+                return;
             }
+
+            pawn.MoveType = MoveType_t.MOVETYPE_NONE;
+            Schema.SetSchemaValue(pawn.Handle, "CBaseEntity", "m_nActualMoveType", 0);
+            Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+            TryRemoveWeapons(player, "FreezePlayer");
+            TryGiveNamedItem(player, "weapon_knife", "FreezePlayer");
         }
         private void CheckForTripleLevel(GGPlayer client)
         {
@@ -2824,31 +3067,31 @@ namespace GunGame
             if (playerController == null)
                 return;
             player.TripleEffects = true;
-            if (playerController.PlayerPawn != null && playerController.PlayerPawn.Value != null)
+            if (TryGetPlayerPawn(playerController, out var pawn))
             {
                 if (Config.MultiLevelBonusGodMode)
                 {
-                    playerController.PlayerPawn.Value.TakesDamage = false;
+                    pawn.TakesDamage = false;
                 }
                 if (Config.MultiLevelBonusGravity != 1)
                 {
-                    playerController.PlayerPawn.Value.GravityScale = Config.MultiLevelBonusGravity;
+                    pawn.GravityScale = Config.MultiLevelBonusGravity;
                 }
                 if (Config.MultiLevelBonusSpeed != 1)
                 {
-                    playerController.PlayerPawn.Value.VelocityModifier = Config.MultiLevelBonusSpeed;
+                    pawn.VelocityModifier = Config.MultiLevelBonusSpeed;
                     // m_flVelocityModifier self-recovers to 1.0 within seconds, so a single
                     // assignment is imperceptible - keep re-applying it while the bonus lasts.
                     CounterStrikeSharp.API.Modules.Timers.Timer? speedTimer = null;
                     speedTimer = AddTimer(0.25f, () =>
                     {
                         var pc = Utilities.GetPlayerFromSlot(player.Slot);
-                        if (!player.TripleEffects || pc == null || !pc.IsValid || pc.PlayerPawn == null || pc.PlayerPawn.Value == null)
+                        if (!player.TripleEffects || pc == null || !pc.IsValid || !TryGetPlayerPawn(pc, out var tickPawn))
                         {
                             speedTimer?.Kill();
                             return;
                         }
-                        pc.PlayerPawn.Value.VelocityModifier = Config.MultiLevelBonusSpeed;
+                        tickPawn.VelocityModifier = Config.MultiLevelBonusSpeed;
                     }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
                 }
                 var soundData = soundMapper.GetSoundValue("MultiLevel");
@@ -2857,7 +3100,7 @@ namespace GunGame
                 {
                     RecipientFilter filter = [];
                     filter.AddAllPlayers();
-                    playerController.PlayerPawn.Value.EmitSound(soundData.Value.SoundValue, filter, 0.8f);
+                    pawn.EmitSound(soundData.Value.SoundValue, filter, 0.8f);
                     //                    PlaySound(null!, Config.MultiLevelSound);
                 }
                 else
@@ -2928,7 +3171,7 @@ namespace GunGame
                 {
                     filter = [playerController];
                     var player = playerManager.FindBySlot(playerController.Slot, "PlaySoundEvent");
-                    if (player != null && player.Music && playerController.PlayerPawn != null && playerController.PlayerPawn.Value != null)
+                    if (player != null && player.Music && TryGetPlayerPawn(playerController, out _))
                     {
                         //                        playerController.EmitSound(str, filter, 0.8f);
                         playerController.EmitSound(str, filter);
@@ -3018,7 +3261,6 @@ namespace GunGame
             Weapon? wep = GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == player.Level);
             if (wep != null && wep.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
             {
-                Logger.LogInformation($"[GunGame] ******* PlaySoundForLeaderLevel: Hegrenade for player {player.PlayerName}");
                 PlayConfiguredSound("NadeInfo", 0.7f);
                 //                PlaySoundDelayed(1.0f, null!, Config.NadeInfoSound);
                 return;
@@ -3042,21 +3284,19 @@ namespace GunGame
             var playerController = Utilities.GetPlayerFromSlot(player.Slot);
             if (playerController == null)
                 return;
-            if (playerController.PlayerPawn != null && playerController.PlayerPawn.Value != null)
+            if (TryGetPlayerPawn(playerController, out var pawn))
             {
                 if (Config.MultiLevelBonusGodMode)
                 {
-                    playerController.PlayerPawn.Value.TakesDamage = true;
+                    pawn.TakesDamage = true;
                 }
                 if (Config.MultiLevelBonusGravity != 0)
                 {
-                    playerController.PlayerPawn.Value.GravityScale = 1.0f;
+                    pawn.GravityScale = 1.0f;
                 }
                 if (Config.MultiLevelBonusSpeed != 0)
                 {
-                    // CSS 1.0.371+: CBaseEntity.Speed was removed (CS2 schema change);
-                    // reset via VelocityModifier, the same property used to apply the bonus.
-                    playerController.PlayerPawn.Value.VelocityModifier = 1.0f;
+                    pawn.VelocityModifier = 1.0f;
                 }
             }
             if (Config.MultiLevelEffect)
@@ -3079,14 +3319,12 @@ namespace GunGame
                         }
                         g_Ent_Effect[client] = -1; */
         }
-        private static bool HasWeapon(CCSPlayerController playerController, string weapon)
+        private bool HasWeapon(CCSPlayerController playerController, string weapon)
         {
             bool found = false;
-            if (playerController != null && playerController.IsValid
-                && playerController.PlayerPawn != null && playerController.PlayerPawn.Value != null
-                && playerController.PlayerPawn.Value.WeaponServices != null)
+            if (TryGetPlayerPawn(playerController, out var pawn) && pawn.WeaponServices != null)
             {
-                foreach (var clientWeapon in playerController.PlayerPawn.Value.WeaponServices.MyWeapons)
+                foreach (var clientWeapon in pawn.WeaponServices.MyWeapons)
                 {
                     if (clientWeapon is { IsValid: true, Value.IsValid: true })
                     {
@@ -3100,15 +3338,18 @@ namespace GunGame
             }
             return found;
         }
-        private static void RemoveGrenades(CCSPlayerController playerController)
+        private void RemoveGrenades(CCSPlayerController playerController)
         {
-            if (playerController == null)
+            if (!TryGetPlayerPawn(playerController, out var playerPawn))
                 return;
-            var weapons = playerController.PlayerPawn.Value?.WeaponServices;
+            var weapons = playerPawn.WeaponServices;
 
-            foreach (var weapon in weapons!.MyWeapons)
+            if (weapons == null)
+                return;
+
+            foreach (var weapon in weapons.MyWeapons)
             {
-                if (weapon == null || weapon.Value == null) continue;
+                if (weapon is not { IsValid: true, Value.IsValid: true }) continue;
 
                 CCSWeaponBaseVData? _weapon = weapon.Value.As<CCSWeaponBase>().VData;
 
@@ -3293,9 +3534,7 @@ namespace GunGame
                                 playerController.PrintToChat(Localizer["handicap.updated"]);
                             }
                         }
-                        if (Config.TurboMode && playerController != null && playerController.Pawn != null
-                            && playerController.Pawn.Value != null
-                            && playerController.Pawn.Value.LifeState == (byte)LifeState_t.LIFE_ALIVE)
+                        if (Config.TurboMode && TryGetAlivePlayerPawn(playerController, out _))
                         {
                             GiveNextWeapon(player.Slot);
                         }
@@ -3510,7 +3749,8 @@ namespace GunGame
             if (GGVariables.Instance.CurrentLeader.Slot == player.Slot)
             {
                 // say leading on level X
-                if (Config.ShowLeaderWeapon && player.LevelWeapon.Index > 0)
+                var levelWeapon = player.LevelWeapon;
+                if (Config.ShowLeaderWeapon && levelWeapon != null && levelWeapon.Index > 0)
                 {
                     var pe = GetValidPlayers();
                     //                    Utilities.GetPlayers().Where(p => p != null && p.IsValid && p.Connected == PlayerConnectedState.Connected && !p.IsBot && !p.IsHLTV);
@@ -3521,7 +3761,7 @@ namespace GunGame
                             var pl = playerManager.FindBySlot(pc.Slot, "PrintLeaderToChat1");
                             if (pl != null)
                             {
-                                pc.PrintToCenter(pl.Translate("leading.onweapon", player.PlayerName, player.LevelWeapon.Name));
+                                pc.PrintToCenter(pl.Translate("leading.onweapon", player.PlayerName, levelWeapon.Name));
                             }
                         }
                     }
@@ -4506,7 +4746,7 @@ namespace GunGame
                     bool requiredRespawn = false;
                     AddTimer(1.0f, () =>
                     {
-                        if (!IsValidPlayer(pl) || pl.PlayerPawn == null || !pl.PlayerPawn.IsValid || pl.PlayerPawn.Value == null) return;
+                        if (!TryGetPlayerPawn(pl, out _)) return;
                         double thisDeathTime = Server.EngineTime;
                         double deltaDeath = thisDeathTime - LastDeathTime[pl.Slot];
                         LastDeathTime[pl.Slot] = thisDeathTime;
@@ -4571,9 +4811,9 @@ namespace GunGame
         {
             Server.NextFrame(() =>
             {
-                if (player != null && player.IsValid && player.PlayerPawn != null && player.PlayerPawn.Value != null)
+                if (TryGetPlayerPawn(player, out var pawn))
                 {
-                    player.PlayerPawn.Value.Teleport(spawn.Position, spawn.Rotation, new Vector(0, 0, 0));
+                    pawn.Teleport(spawn.Position, spawn.Rotation, new Vector(0, 0, 0));
                 }
             });
         }
@@ -4807,10 +5047,6 @@ namespace GunGame
             if (p != null && p.IsValid && (p.SteamID.ToString().Length == 17 || (p.SteamID == 0 && p.IsBot)) &&
                 p.Connected == PlayerConnectedState.Connected && !p.IsHLTV)
             {
-                if (!p.PlayerPawn.IsValid)
-                {
-                    Logger.LogInformation($"Name {p.PlayerName} ({p.Slot}) {p.SteamID} - PlayerPawn is not valid");
-                }
                 return true;
             }
             return false;
@@ -4900,6 +5136,13 @@ namespace GunGame
         {
             return playerMap.TryGetValue(slot, out GGPlayer? player);
         }
+        public bool IsCurrentPlayer(int slot, GGPlayer player)
+        {
+            lock (lockObject)
+            {
+                return playerMap.TryGetValue(slot, out GGPlayer? currentPlayer) && ReferenceEquals(currentPlayer, player);
+            }
+        }
         public GGPlayer? FindLeader()
         {
             int leaderId = -1;
@@ -4942,19 +5185,18 @@ namespace GunGame
                 var pc = Utilities.GetPlayerFromSlot(player.Value.Slot);
                 if (pc != null && Plugin.IsValidPlayer(pc))
                 {
-                    if (pc.PlayerPawn != null && pc.Pawn != null &&
-                        pc.PlayerPawn.IsValid && pc.PlayerPawn.Value != null && pc.Pawn.IsValid && pc.Pawn.Value != null &&
-                        pc.PlayerPawn.Value.AbsOrigin != null)
+                    if (Plugin.TryGetPlayerPawn(pc, out var playerPawn) &&
+                        playerPawn.AbsOrigin != null)
                     {
-                        /*                        if (IsPlayerNearEntity(spawn, pc.PlayerPawn.Value.AbsOrigin, minDistance))
+                        /*                        if (IsPlayerNearEntity(spawn, playerPawn.AbsOrigin, minDistance))
                                                 {
                                                     return true;
                                                 }*/
-                        /*                        if (pc.Pawn.Value.LifeState != (byte)LifeState_t.LIFE_ALIVE)
+                        /*                        if (playerPawn.LifeState != (byte)LifeState_t.LIFE_ALIVE)
                                                 {
                                                     continue;
                                                 } */
-                        dist = PlayerDistance(spawn, pc.PlayerPawn.Value.AbsOrigin);
+                        dist = PlayerDistance(spawn, playerPawn.AbsOrigin);
                         if (dist < minD)
                         {
                             minD = dist;
@@ -5007,6 +5249,8 @@ namespace GunGame
     {
         private readonly object lockObject = new();
         private readonly GunGame Plugin;
+        private ulong statsLoadSteamId;
+        private bool statsLoadRequested;
         public GGPlayer(int slot, GunGame plugin)
         {
             Plugin = plugin;
@@ -5016,7 +5260,7 @@ namespace GunGame
             Index = -1;
             SavedSteamID = 0;
             IdAttempts = 0;
-            LevelWeapon = GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == 1)!;
+            LevelWeapon = GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == 1) ?? new();
             Angles = new QAngle();
             Origin = new Vector();
             PlayerWins = -1;
@@ -5053,6 +5297,7 @@ namespace GunGame
         public int LevelsPerRound { get; set; } = 0;
         public bool PutInServer { get; set; } = false;
         public int IdAttempts { get; set; }
+        public CounterStrikeSharp.API.Modules.Timers.Timer? AuthorisationRetryTimer { get; set; }
         public QAngle? Angles { get; set; }
         public Vector? Origin { get; set; }
         public int AfkCount { get; set; } = 0;
@@ -5062,6 +5307,27 @@ namespace GunGame
         public string IP { get; set; }
         public CultureInfo Culture { get; set; }
         public bool Music { get; set; }
+        public bool TryQueueStatsLoad(ulong steamId)
+        {
+            if (steamId == 0)
+            {
+                return false;
+            }
+
+            if (statsLoadSteamId != steamId)
+            {
+                statsLoadSteamId = steamId;
+                statsLoadRequested = false;
+            }
+
+            if (statsLoadRequested)
+            {
+                return false;
+            }
+
+            statsLoadRequested = true;
+            return true;
+        }
         public void SetLevel(int setLevel)
         {
             if (setLevel > GGVariables.Instance.WeaponOrderCount || setLevel < 0)
@@ -5070,7 +5336,7 @@ namespace GunGame
             {
                 this.Level = (uint)setLevel;
                 if (setLevel > 0)
-                    LevelWeapon = GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == Level)!;
+                    LevelWeapon = GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == Level) ?? new();
                 else
                     LevelWeapon = new();
             }
@@ -5083,9 +5349,7 @@ namespace GunGame
             Music = value;
             //            Plugin.Logger.LogInformation($"{PlayerName} sound set to {(Music ? "on" : "off")}");
             var playerController = Utilities.GetPlayerFromSlot(Slot);
-            if (playerController != null && playerController.IsValid
-                && playerController.Pawn != null && playerController.Pawn.Value != null
-                && playerController.Pawn.Value.LifeState == (byte)LifeState_t.LIFE_ALIVE)
+            if (playerController != null && Plugin.TryGetAlivePlayerPawn(playerController, out _))
             {
                 if (Music)
                 {

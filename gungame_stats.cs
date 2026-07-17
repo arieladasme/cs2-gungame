@@ -405,7 +405,7 @@ namespace GunGame.Stats
                         try
                         {
                             var response = reader.Country(player.IP);
-                            if (response != null && response.Country != null && response.Country.IsoCode != null)
+                            if (response is not null && response.Country is not null && response.Country.IsoCode is not null)
                             {
                                 ipcountrycode = response.Country.IsoCode.ToLower();
                             }
@@ -1194,19 +1194,13 @@ namespace GunGame.Stats
                 {
                     try
                     {
-                        Server.NextFrame(async () => {
-                            await operation();
-                        });
-                        
+                        Task operationTask = await Server.NextFrameAsync(operation);
+                        await operationTask;
                     }
                     catch (Exception ex)
                     {
-                        // Handle exception (e.g., log error)
-                        Console.WriteLine($"******************* Database operation failed: {ex.Message}");
-                        Server.NextFrame( () => 
-                        {
-                            Plugin.Logger.LogError($"ProcessQueueAsync: Database operation failed: {ex.Message}");
-                        });
+                        Console.WriteLine($"Database operation failed: {ex}");
+                        Plugin.Logger.LogError(ex, "ProcessQueueAsync: Database operation failed");
                     }
                 }
             }
