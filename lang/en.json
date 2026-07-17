@@ -50,5 +50,13 @@
   "change.language": "You can set Russian lanaguage by {olive}'!lang ru' command.",
   "music.success": " {green}Your sound preference updates and saved.",
   "music.error": " {red}Error updating your sound preference. Try again later.",
-  "notop.records": "Leaders list is empty"
-} 
+  "notop.records": "Leaders list is empty",
+  "team.t.name": "Terrorists",
+  "team.ct.name": "Counter-Terrorists",
+  "your.team.level": "{green}Your team is on level {0} of {1}",
+  "team.kills.toadvance": "Your team needs {green}{0}{default} more kill(s) to advance",
+  "teams.levels": "T: level {0} | CT: level {1}",
+  "team.onlevel": "{green}{0}{default} advanced to level {1}",
+  "team.stolen": "{0} {red}stole {1} kill(s){default} for the team from {2}",
+  "teamplay.suicide": "{green}{0}{default} lost {1} kill(s) from the team pool by suicide"
+}

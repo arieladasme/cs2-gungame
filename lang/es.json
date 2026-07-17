@@ -50,5 +50,13 @@
   "change.language": "Puedes cambiar el idioma con el comando {olive}'!lang es'.",
   "music.success": " {green}Tu preferencia de sonido fue actualizada y guardada.",
   "music.error": " {red}Error al actualizar tu preferencia de sonido. Intenta más tarde.",
-  "notop.records": "La lista de líderes está vacía"
+  "notop.records": "La lista de líderes está vacía",
+  "team.t.name": "Terroristas",
+  "team.ct.name": "Antiterroristas",
+  "your.team.level": "{green}Tu equipo va en el nivel {0} de {1}",
+  "team.kills.toadvance": "Tu equipo necesita {green}{0}{default} baja(s) más para subir",
+  "teams.levels": "T: nivel {0} | CT: nivel {1}",
+  "team.onlevel": "{green}{0}{default} subió al nivel {1}",
+  "team.stolen": "{0} {red}robó {1} baja(s){default} para su equipo al matar a {2}",
+  "teamplay.suicide": "{green}{0}{default} le costó {1} baja(s) al equipo por suicidio"
 }

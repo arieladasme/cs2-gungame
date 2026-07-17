@@ -52,5 +52,13 @@
   "change.language": "Переключить на английский можно командой {olive}'!lang en'",
   "music.success": " {green}Параметры звука обновлены и сохранены.",
   "music.error": " {red}Ошибка изменения параметра звука. Попробуйте ещё раз позже.",
-  "notop.records": "Список лидеров пустой"
+  "notop.records": "Список лидеров пустой",
+  "team.t.name": "Террористы",
+  "team.ct.name": "Спецназ",
+  "your.team.level": "{green}Ваша команда на уровне {0} из {1}",
+  "team.kills.toadvance": "Вашей команде нужно ещё {green}{0}{default} убийств для перехода",
+  "teams.levels": "T: уровень {0} | CT: уровень {1}",
+  "team.onlevel": "{green}{0}{default} перешли на уровень {1}",
+  "team.stolen": "{0} {red}украл {1} убийств{default} для команды у {2}",
+  "teamplay.suicide": "{green}{0}{default} лишил команду {1} убийств самоубийством"
 } 

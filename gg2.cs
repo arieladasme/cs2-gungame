@@ -1688,6 +1688,18 @@ namespace GunGame
                 }
                 if (TeamKill)
                 {
+                    if (IsTeamplayActive)
+                    {
+                        // Teamplay: a TK costs the team TkLooseLevel kills from the pool (floor 0).
+                        PlayConfiguredSound("TeamKill", 0.7f);
+                        var tkTs = GGVariables.Instance.GetTeamState(KillerController.TeamNum);
+                        if (tkTs != null)
+                        {
+                            tkTs.KillPool = Math.Max(0, tkTs.KillPool - Config.TkLooseLevel);
+                        }
+                        Respawn(VictimController);
+                        return HookResult.Continue;
+                    }
                     PlayConfiguredSound("TeamKill", 0.7f);
                     //                    PlayRandomSoundDelayed(0.7f, Config.TeamKillSound);
                     Killer.CurrentLevelPerRound -= Config.TkLooseLevel;
@@ -1755,6 +1767,15 @@ namespace GunGame
                 {
                     GiveExtraMolotov(KillerController, killerLevelWeapon.Index);
                 }
+            }
+
+            if (IsTeamplayActive)
+            {
+                // Teamplay replaces the whole individual kill flow below
+                // (MaxLevelPerRound, individual KnifePro, per-player counting).
+                HandleTeamplayKill(Killer, KillerController, Victim, VictimController, usedWeaponInfo, killerLevelWeapon, weapon_used);
+                Respawn(VictimController);
+                return HookResult.Continue;
             }
 
             if ((Config.MaxLevelPerRound > 0) && Killer.CurrentLevelPerRound >= Config.MaxLevelPerRound)
@@ -3825,7 +3846,8 @@ namespace GunGame
         }
         public int ChangeLevel(GGPlayer player, int difference, bool KnifeSteal = false, CCSPlayerController victimPc = null!)
         {
-            if (difference == 0 || !GGVariables.Instance.IsActive || warmupInitialized || GGVariables.Instance.GameWinner != null)
+            if (difference == 0 || !GGVariables.Instance.IsActive || warmupInitialized || GGVariables.Instance.GameWinner != null
+                || IsTeamplayActive) // safety net: no residual path may desync individual levels in teamplay
             {
                 return (int)player.Level;
             }
@@ -4097,6 +4119,269 @@ namespace GunGame
                 sv_alltalk?.SetValue(true);
             }
         }
+
+        #region Teamplay
+        // CS 1.6 gg_teamplay: shared team level, collective kill pool.
+        // Goal per level = individual kill requirement x players on the team,
+        // reduced on special levels (knife x TeamplayMeleeMod, HE x TeamplayNadeMod).
+        private int TeamplayKillsGoal(TeamState ts)
+        {
+            int req = GetCustomKillPerLevel(ts.Level);
+            int players = CountPlayersForTeam((CsTeam)ts.TeamNum);
+            double mod = 1.0;
+            Weapon? wep = GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == ts.Level);
+            if (wep != null)
+            {
+                if (wep.LevelIndex == SpecialWeapon.KnifeLevelIndex)
+                    mod = Config.TeamplayMeleeMod;
+                else if (wep.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
+                    mod = Config.TeamplayNadeMod;
+            }
+            return Math.Max(1, (int)Math.Ceiling(players * req * mod));
+        }
+        private bool TeamIsAllBots(int teamNum)
+        {
+            var players = GetValidPlayersWithBots();
+            if (players == null || !players.Any())
+                return false;
+            bool any = false;
+            foreach (var pc in players)
+            {
+                if (pc.TeamNum != teamNum) continue;
+                any = true;
+                if (!pc.IsBot) return false;
+            }
+            return any;
+        }
+        private void TeamplayBroadcast(string token, params object[] args)
+        {
+            var playerEntities = GetValidPlayers();
+            if (playerEntities == null || !playerEntities.Any())
+                return;
+            foreach (var pc in playerEntities)
+            {
+                var pl = playerManager.FindBySlot(pc.Slot, "TeamplayBroadcast");
+                if (pl != null)
+                {
+                    pc.PrintToChat(pl.Translate(token, args));
+                }
+            }
+        }
+        private string TeamplayTeamName(int teamNum)
+        {
+            return Localizer[teamNum == (int)CsTeam.Terrorist ? "team.t.name" : "team.ct.name"];
+        }
+        // Replaces the individual kill flow when teamplay is active. Runs after the
+        // extra nade/taser/molotov gives and skips MaxLevelPerRound by design.
+        private void HandleTeamplayKill(GGPlayer Killer, CCSPlayerController KillerController,
+            GGPlayer Victim, CCSPlayerController VictimController,
+            WeaponInfo usedWeaponInfo, Weapon killerLevelWeapon, string weapon_used)
+        {
+            var ts = GGVariables.Instance.GetTeamState(KillerController.TeamNum);
+            if (ts == null)
+                return;
+
+            bool pooled = false;
+
+            /* Steal: knife (or molotov) kill outside its own level credits the team pool
+               with the INDIVIDUAL requirement of the current level (AMXX teamplay rule). */
+            if (((Config.KnifePro && usedWeaponInfo.LevelIndex == SpecialWeapon.KnifeLevelIndex)
+                 || (Config.MolotovPro && usedWeaponInfo.LevelIndex == SpecialWeapon.MolotovLevelIndex))
+                && killerLevelWeapon.LevelIndex != usedWeaponInfo.LevelIndex)
+            {
+                var victimTs = GGVariables.Instance.GetTeamState(VictimController.TeamNum);
+                bool follow = victimTs != null;
+                if (follow && victimTs!.Level < Config.KnifeProMinLevel)
+                {
+                    if (!KillerController.IsBot) KillerController.PrintToCenter(Killer.Translate("level.low", Victim.PlayerName, Config.KnifeProMinLevel));
+                    follow = false;
+                }
+                if (follow && (Config.KnifeProMaxDiff > 0) && (Config.KnifeProMaxDiff < (victimTs!.Level - ts.Level)))
+                {
+                    if (!KillerController.IsBot) KillerController.PrintToCenter(Killer.Translate("level.difference", Victim.PlayerName, Config.KnifeProMaxDiff));
+                    follow = false;
+                }
+                // Same special-level vetoes as individual mode, against the team's level weapon.
+                if (follow && !Config.KnifeProHE && killerLevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
+                    return;
+                if (follow && killerLevelWeapon.LevelIndex == SpecialWeapon.TaserLevelIndex)
+                    return;
+                if (follow && killerLevelWeapon.LevelIndex == SpecialWeapon.MolotovLevelIndex
+                    && usedWeaponInfo.LevelIndex != SpecialWeapon.MolotovLevelIndex)
+                    follow = false;
+
+                if (follow)
+                {
+                    int credit = GetCustomKillPerLevel(ts.Level);
+                    ts.KillPool += credit;
+                    pooled = true;
+                    TeamplayBroadcast("team.stolen", Killer.PlayerName, credit, Victim.PlayerName);
+                    if (usedWeaponInfo.LevelIndex == SpecialWeapon.KnifeLevelIndex)
+                    {
+                        PlayConfiguredSound("KnifeSteal", 0.7f);
+                        try
+                        {
+                            CoreAPI.RaiseKnifeStealEvent(KillerController.Slot, VictimController.Slot);
+                        }
+                        catch (Exception ex)
+                        {
+                            Server.NextFrame(() =>
+                            {
+                                Logger.LogError($"[GunGame API ERROR] RaiseKnifeStealEvent returned exception: {ex.Message}");
+                            });
+                        }
+                    }
+                    else
+                    {
+                        PlayConfiguredSound("MolotovKill", 0.7f);
+                    }
+                }
+            }
+
+            if (!pooled)
+            {
+                try
+                {
+                    CoreAPI.RaiseWeaponFragEvent(Killer.Slot, usedWeaponInfo.FullName);
+                }
+                catch (Exception ex)
+                {
+                    Server.NextFrame(() =>
+                    {
+                        Logger.LogError($"[GunGame API ERROR] RaiseWeaponFragEvent returned exception: {ex.Message}");
+                    });
+                }
+
+                /* They didn't kill with the weapon required - same map nade / physics rules */
+                if (usedWeaponInfo.LevelIndex != killerLevelWeapon.LevelIndex)
+                {
+                    bool acceptable;
+                    if (usedWeaponInfo.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
+                    {
+                        acceptable = Config.CanLevelUpWithMapNades
+                            && (Config.CanLevelUpWithNadeOnKnife
+                                || killerLevelWeapon.LevelIndex != SpecialWeapon.KnifeLevelIndex);
+                    }
+                    else
+                    {
+                        acceptable = Config.CanLevelUpWithPhysics
+                            && ((weapon_used == "prop_physics") || (weapon_used == "prop_physics_multiplayer"))
+                            && ((killerLevelWeapon.LevelIndex != SpecialWeapon.HegrenadeLevelIndex && killerLevelWeapon.LevelIndex != SpecialWeapon.KnifeLevelIndex)
+                                || (Config.CanLevelUpWithPhysicsOnGrenade && killerLevelWeapon.LevelIndex == SpecialWeapon.HegrenadeLevelIndex)
+                                || (Config.CanLevelUpWithPhysicsOnKnife && killerLevelWeapon.LevelIndex == SpecialWeapon.KnifeLevelIndex));
+                    }
+                    if (!acceptable)
+                    {
+                        if (Config.ReloadWeapon)
+                        {
+                            ReloadActiveWeapon(KillerController);
+                        }
+                        return;
+                    }
+                }
+
+                /* External subscribers can veto the point, like in individual mode */
+                bool Accepted = true;
+                try
+                {
+                    Accepted = CoreAPI.RaisePointChangeEvent(Killer.Slot, ts.KillPool + 1, Victim.Slot);
+                }
+                catch (Exception ex)
+                {
+                    Server.NextFrame(() =>
+                    {
+                        Logger.LogError($"[GunGame API ERROR] RaisePointChangeEvent returned exception: {ex.Message}");
+                    });
+                }
+                if (!Accepted)
+                    return;
+                ts.KillPool++;
+            }
+
+            int goal = TeamplayKillsGoal(ts);
+            if (ts.KillPool >= goal)
+            {
+                TeamplayLevelUp(ts, Killer, VictimController);
+            }
+            else
+            {
+                if (Config.ReloadWeapon)
+                {
+                    ReloadActiveWeapon(KillerController);
+                }
+                if (!KillerController.IsBot)
+                {
+                    PlayConfiguredSound("MultiKill", 0.0f, KillerController);
+                }
+                if (Config.MultiKillChat)
+                {
+                    int left = goal - ts.KillPool;
+                    var playerEntities = GetValidPlayers();
+                    if (playerEntities != null && playerEntities.Any())
+                    {
+                        foreach (var pc in playerEntities)
+                        {
+                            if (pc.TeamNum != ts.TeamNum) continue;
+                            var pl = playerManager.FindBySlot(pc.Slot, "HandleTeamplayKill");
+                            if (pl != null)
+                            {
+                                pc.PrintToChat(pl.Translate("team.kills.toadvance", left));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        private void TeamplayLevelUp(TeamState ts, GGPlayer scorer, CCSPlayerController victimPc)
+        {
+            ts.KillPool = 0; // no carry-over, like AMXX
+            int newLevel = ts.Level + 1;
+            if (newLevel > GGVariables.Instance.WeaponOrderCount)
+            {
+                if (!Config.BotCanWin && TeamIsAllBots(ts.TeamNum))
+                {
+                    /* Bot team can't win so just keep them at the last level */
+                    return;
+                }
+                TeamplayWin(ts, scorer, victimPc);
+                return;
+            }
+            ts.Level = newLevel;
+            ApplyLevelThresholds(newLevel);
+
+            var players = GetValidPlayersWithBots();
+            if (players != null && players.Any())
+            {
+                foreach (var pc in players)
+                {
+                    if (pc.TeamNum != ts.TeamNum) continue;
+                    var pl = playerManager.FindBySlot(pc.Slot, "TeamplayLevelUp");
+                    if (pl == null) continue;
+                    pl.SetLevel(newLevel);
+                    pl.CurrentKillsPerWeap = 0;
+                    UpdatePlayerScoreLevel(pl);
+                    if (pc.Pawn != null && pc.Pawn.Value != null
+                        && pc.Pawn.Value.LifeState == (byte)LifeState_t.LIFE_ALIVE)
+                    {
+                        GiveNextWeapon(pl.Slot); // TurboMode-style: new weapon right away
+                    }
+                }
+            }
+            PlayConfiguredSound("LevelUp", 0.0f); // single broadcast, not per player
+            PlaySoundForLeaderLevel(scorer.Slot); // KnifeInfo / NadeInfo on special levels
+            TeamplayBroadcast("team.onlevel", TeamplayTeamName(ts.TeamNum), newLevel);
+        }
+        private void TeamplayWin(TeamState ts, GGPlayer scorer, CCSPlayerController victimPc)
+        {
+            // TeamNum of the scorer drives TerminateRound(TerroristsWin/CTsWin) in
+            // EndMultiplayerGameNormal, so the match ends as a real team victory.
+            GGVariables.Instance.GameWinner = new(scorer)
+            {
+                Name = TeamplayTeamName(ts.TeamNum)
+            };
+            DeclareWinnerCommon(scorer, victimPc);
+        }
+        #endregion Teamplay
         public void SavePlayerWins(GGPlayer player)
         {
             //            Logger.LogInformation($"{player.PlayerName} won, wins was {player.PlayerWins}");
