@@ -13,7 +13,7 @@ Código, identificadores, comentarios y docstrings: **siempre en inglés**.
 
 ## 1. Qué es este repo (importante — evita la confusión #1)
 
-Este repo **es la fuente del plugin GunGame** (fork de `ssypchenko/cs2-gungame`): C# / .NET 8 sobre CounterStrikeSharp. NO es un plugin consumidor de la API — es la base misma. El archivo `gg2.cs` (~4500 líneas) es el `BasePlugin` completo.
+Este repo **es la fuente del plugin GunGame** (fork de `ssypchenko/cs2-gungame`): C# / **.NET 10** sobre CounterStrikeSharp (net8.0 hasta 2026-07-16; migrado a net10.0 porque CSS 1.0.371 lo exige). NO es un plugin consumidor de la API — es la base misma. El archivo `gg2.cs` (~4500 líneas) es el `BasePlugin` completo.
 
 **Estrategia del proyecto:** las extensiones propias (sonidos custom, votemap, ranks, Discord, efectos visuales) van en **plugins CSS separados** que se suscriben a la **GunGame API** — NO se escriben dentro de este fork. Motivo: no pelear con cada actualización upstream. Ver `docs/` para el plan y el catálogo de plugins objetivo.
 
@@ -32,11 +32,11 @@ No hay build system propio ni suite de tests — es un proyecto SDK-style de .NE
 #    GG2.csproj tiene <ProjectReference> a GunGameAPI\GunGameAPI.csproj; sin esto el build falla.
 git submodule update --init --recursive
 
-# 2. Compilar (net8.0)
+# 2. Compilar (net10.0)
 dotnet build GG2.csproj -c Release
 ```
 
-- **Framework:** `net8.0`, `Nullable=enable`, `ImplicitUsings=enable`, `AllowUnsafeBlocks=true`.
+- **Framework:** `net10.0` (GG2.csproj y el submódulo GunGameAPI — ambos bumpeados localmente el 2026-07-16), `Nullable=enable`, `ImplicitUsings=enable`, `AllowUnsafeBlocks=true`.
 - **No hay tests automatizados.** La verificación es en runtime: desplegar los DLLs a un servidor CS2 y probar. Usar el **CS2 RCON MCP** (ver §7) para `css_plugins list`, reiniciar y monitorear logs sin salir de la sesión.
 - **Deploy manual:** DLLs compilados → `csgo/addons/counterstrikesharp/plugins/GG2`; configs de `cfg_files/csgo/cfg/gungame/` → `csgo/cfg/gungame`; `GeoLite2-Country.mmdb` → `csgo/cfg`.
 - `+game_type 0 +game_mode 0` es requisito de gungame en el launch config del servidor.
@@ -70,12 +70,17 @@ Puntos clave:
 
 | Componente | Versión actual |
 |---|---|
-| `gg2.cs` (`ModuleVersion`) | **v1.2.2** |
-| `GG2.csproj` → `CounterStrikeSharp.API` | **1.0.367** |
-| Metamod:Source instalado (server local) | 2.0.0 **git1402** (`D:\cs2-server`) |
-| CSS runtime instalado (server local) | **v1.0.370** (.NET 10, with-runtime) |
+| `gg2.cs` (`ModuleVersion`) | **v1.2.2** + fixes locales (ver abajo) |
+| `GG2.csproj` → `CounterStrikeSharp.API` | **1.0.371** (net10.0; era 1.0.367/net8.0 hasta 2026-07-16) |
+| Metamod:Source instalado (server local) | 2.0.0 **git1406** (`D:\cs2-server`, actualizado 2026-07-16) |
+| CSS runtime instalado (server local) | **v1.0.371** (.NET 10, with-runtime, actualizado 2026-07-16) |
 
-El plugin targetea CSS API 1.0.367 y corre sobre el runtime 1.0.370 (misma línea 1.0.x, compatible). Si vas a subir de versión, confirmar contra `roflmuffin/CounterStrikeSharp` y `ssypchenko/cs2-gungame` — no asumir.
+**Divergencias locales vs upstream v1.2.2 (2026-07-16):** (1) `GG2.csproj` y `GunGameAPI.csproj` a net10.0 + CSS API 1.0.371; (2) `gg2.cs` `StopTripleEffects`: `PlayerPawn.Value.Speed = 1.0f` → `VelocityModifier = 1.0f` (CSS 1.0.371 eliminó `CBaseEntity.Speed` tras cambio de schema de Valve; el bonus se aplica con `VelocityModifier`, el reset ahora usa lo mismo); (3) `gg2.cs` `ReloadActiveWeapon`: `SetStateChanged(..., "m_pReserveAmmo")` → `"m_iClip1"` — el "does not work now" de `ReloadWeapon` era solo notificación al campo equivocado; con el fix, `ReloadWeapon: true` funciona (recarga el cargador al matar). Al actualizar a un upstream nuevo, revisar si ya los arreglaron.
+
+**Gotchas vividos (2026-07-16, update CS2 build 24209309):**
+- CSS 1.0.370 dejó de cargar SIN error visible — server corría casual puro ("el gungame no está activado"). Síntoma: cero líneas nuevas en `logs/log-all*.txt` tras el boot. Fix: actualizar Metamod snapshot + CSS release en `D:\cs2-stack\` y re-correr `stack-deploy.ps1`.
+- Con CSS nuevo pero plugin compilado contra API vieja: `[EROR] Error invoking callback` + `MissingMethodException` en cada kill → sin level-ups aunque el plugin "cargue". Fix: recompilar contra la API instalada.
+- Cvars de partida (`mp_warmuptime`, `mp_freezetime`, etc.) en `server.cfg` NO ganan: el gamemode los pisa después. Ponerlos en **`cfg/gamemode_casual_server.cfg`** (CS2 lo ejecuta tras `gamemode_casual.cfg` en cada mapa — mismo hook que usaba el server CSGO viejo). Si vas a subir de versión, confirmar contra `roflmuffin/CounterStrikeSharp` y `ssypchenko/cs2-gungame` — no asumir.
 
 Reglas de verificación:
 - **SourceMod NO aplica a CS2.** Stack único viable: Metamod:Source v2 + CounterStrikeSharp (C#/.NET 8). Si algo sugiere `.smx`/SourcePawn, es conocimiento desactualizado — corregir.
@@ -107,11 +112,11 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 ## 7. Herramientas Claude Code
 
-- **dotnet-claude-kit** (`codewithmukesh/dotnet-claude-kit`, MIT) — **instalado**. El global tool del MCP Roslyn ya está (`cwm-roslyn-navigator` v0.7.0, vía `dotnet tool install -g CWM.RoslynNavigator`). Falta activar el plugin (comandos interactivos): `/plugin marketplace add codewithmukesh/dotnet-claude-kit` → `/plugin install dotnet-claude-kit` → `/dotnet-init` (elegir **proyecto existente**, NO scaffold greenfield).
-  - **Usar:** MCP Roslyn para navegar `gg2.cs` (~4500 líneas) por consultas semánticas (~30-150 tokens) en vez de leer el archivo entero; skills de C#/refactor.
-  - **NO usar:** su scaffolding "clean architecture .NET 10" (Result pattern, capas, plantillas de API) — no aplica a un plugin CSS monolítico net8.0. Ignorar esos comandos.
+- **dotnet-claude-kit** (`codewithmukesh/dotnet-claude-kit`, MIT) — **plugin instalado (2026-07-16)**. Disponibles: ~45 skills C# (`dotnet-claude-kit:modern-csharp`, `build-fix`, `code-review`, `de-sloppify`, `testing`, ...) y 10 agentes .NET (`build-error-resolver`, `code-reviewer`, `refactor-cleaner`, `performance-analyst`, ...). Global tool del MCP Roslyn instalado (`cwm-roslyn-navigator` v0.7.0); el plugin trae su `.mcp.json` — el MCP conecta al **inicio de sesión** (verificar con `/mcp`; sin `.sln`, apuntarlo a `GG2.csproj`).
+  - **Usar:** MCP Roslyn para navegar `gg2.cs` (~4500 líneas) por consultas semánticas (~30-150 tokens) en vez de leer el archivo entero; skills de C#/refactor; agente `build-error-resolver` para builds rotos.
+  - **NO usar:** su scaffolding "clean architecture .NET 10" (Result pattern, capas, plantillas de API) — no aplica a un plugin CSS monolítico net8.0. Ignorar esos comandos. NO regenerar CLAUDE.md con `/dotnet-init` — este archivo es curado a mano.
 - **CS2 RCON MCP** (`v9rt3x/cs2-rcon-mcp`) — **pendiente**: requiere servidor CS2 corriendo (Fase 1+). Instalar cuando el dedicado esté arriba. Docker con env `HOST` / `SERVER_PORT` / `RCON_PASSWORD` (o `.server-env`); no exponer el puerto RCON público. Trae `rcon`, `status`, `list_workshop_maps`, `host_workshop_map`, `workshop_changelevel`.
-- **Repos de referencia clonados localmente** (referencia, no dependencia del build): `roflmuffin/CounterStrikeSharp` (API real, evita alucinar métodos), `ssypchenko/GG1MapChooser` (contrato `ggmc_mapvote_start`), `kus/cs2-modded-server` (`scripts/check-updates.sh`).
+- **Repos de referencia clonados localmente** (referencia, no dependencia del build): `roflmuffin/CounterStrikeSharp` (API real, evita alucinar métodos), `ssypchenko/GG1MapChooser` (contrato `ggmc_mapvote_start`), `kus/cs2-modded-server` (`scripts/check-updates.sh`), **`arieladasme/csgo-gungame-plugin`** en `F:\git\csgo-gungame-plugin` (servidor CSGO original 2016-2020 — fuente de verdad de la paridad: configs, orden de armas, sonidos MP3, server.cfg) y **respaldo del intento CS2 anterior** en `F:\git\respaldo gungame algo malo, problemas con cambio de mapa\` (plugins CSS acompañantes: CS2-SimpleAdmin, MenuManager, PlayerSettings).
 
 > **SDK local:** solo .NET 10 SDK (preview) instalado; no hay .NET 8 SDK. `dotnet build GG2.csproj` (net8.0) funciona igual — el SDK descarga el targeting pack de net8. Si aparece un problema de build raro, sospechar del SDK preview antes que del código.
 
@@ -129,9 +134,21 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 ## 9. Estado actual / próximos pasos
 
-- [ ] Configurar Workshop Addon con soundevents (kill / knife / levelup) + MultiAddonManager
-- [ ] Plugin propio que consuma la GunGame API y dispare soundevents
-- [ ] `gungame.mapvote.cfg` → `ggmc_mapvote_start`; `WinDrawSettings` + `MapPools` en `GG1MapChooser.json`
+**Meta rectora (2026-07-16): paridad con el servidor CSGO original** — replicar en CS2 la configuración de gameplay, orden de armas, sonidos y ambiente del server viejo. Detalle completo y mapeos en `docs/CS2-GunGame-Paridad-CSGO.md`. **Requiere plan (Plan Mode) antes de ejecutar.**
+
+- [x] Portar gameplay: `gungame.config.txt` (CSGO) → `gungame.json` (2026-07-16; valores en doc de paridad §1)
+- [x] Portar orden de armas: 37 niveles estilo CS 1.6 → `gungame_weapons.json` (2026-07-16)
+- [x] Adaptar server cfg CS2: hostname, bots, match cvars (2026-07-16; doc §4)
+- [x] GG1MapChooser v1.8.0 instalado; `ggmc_mapvote_start 25` (default de mapvote.cfg), `ChangeMapAfterWinDraw: true`, pool inicial 12 mapas stock en `GGMCmaps.json` (2026-07-16)
+- [ ] Probar flujo completo in-game: última kill → fin de partida → cambio al mapa votado
+- [x] Pool inicial curado (2026-07-16): 3 stock ar_* + 3 Workshop (fy_iceworld 3070238628, fy_snow 3592238209, aim_map 3070549948) en `GGMCmaps.json` — validar descarga ws en runtime
+- [x] Sonidos preparados (2026-07-16): paquete addon en `F:\git\gungame-sounds-addon\` (17 MP3 + 14 soundevents `gg.*`) + MultiAddonManager v1.5.2 instalado. **Falta: compilar/subir con Workshop Tools (GUI, manual) → llenar Workshop ID → aplicar snippet del README del paquete**
+- [ ] Plugin de extensión GG (repo `F:\git\gg-extensions\`, ahí ya vive GGTrails): winner effects (volar al ganar), MVP del líder, gg.intro/takenlead/lostlead/tiedlead, sonido inicio de ronda — vía GunGame API
+- [ ] Quake sounds (doublekill/headshot/firstblood del server viejo) — base `Kandru/cs2-quake-sounds`, MP3 en repo CSGO `sound/quake/`
+- [ ] Advertisements periódicos en chat (redactar mensajes nuevos; el cfg viejo no se commiteó)
+- [x] GGTrails (2026-07-16): estelas de colores en granadas — plugin propio en `F:\git\gg-extensions\GGTrails\`, desplegado
+- [ ] Admin (opcional): CS2-SimpleAdmin + admins.json del respaldo (credenciales nuevas)
+- ⚠️ Server con config de PRUEBA (7 niveles / 2 kills) — restaurar copiando `cfg_files/csgo/cfg/gungame/*.json` del repo al terminar las pruebas
 - [ ] Probar flujo completo: última kill → fin de partida → votación → cambio de mapa
 - [ ] Instalar CS2 RCON MCP y validar conexión
 - [ ] Evaluar extensiones extra (ver `docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord)
@@ -140,6 +157,7 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 ## 10. Documentación del proyecto
 
+- `docs/CS2-GunGame-Paridad-CSGO.md` — **meta rectora**: mapeo completo servidor CSGO viejo → CS2 (gameplay, armas, sonidos, server cfg, plugins acompañantes).
 - `docs/CS2-GunGame-Estado-y-PlanDeInicio.md` — estado del ecosistema CS2/CSS, causas raíz (sonidos, votemap), plan de retoma paso a paso, tabla de versiones.
 - `docs/CS2-GunGame-Mejoras-Extra.md` — catálogo de plugins de extensión (visuales, datos/ranks, Discord) con prioridades sugeridas.
 - `README.md` (raíz) — README del fork/upstream (comandos, cvars, instalación, FAQ).
