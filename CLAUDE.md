@@ -144,7 +144,7 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 - [x] GG1MapChooser v1.8.0 instalado; `ggmc_mapvote_start 25` (default de mapvote.cfg), `ChangeMapAfterWinDraw: true`, pool inicial 12 mapas stock en `GGMCmaps.json` (2026-07-16)
 - [ ] Probar flujo completo in-game: última kill → fin de partida → cambio al mapa votado
 - [x] Pool inicial curado (2026-07-16): 3 stock ar_* + 3 Workshop (fy_iceworld 3070238628, fy_snow 3592238209, aim_map 3070549948) en `GGMCmaps.json` — validar descarga ws en runtime
-- [x] Sonidos preparados (2026-07-16): paquete addon en `F:\git\gungame-sounds-addon\` (17 MP3 + 14 soundevents `gg.*`) + MultiAddonManager v1.5.2 instalado. **Falta: compilar/subir con Workshop Tools (GUI, manual) → llenar Workshop ID → aplicar snippet del README del paquete**
+- [x] Sonidos listos (2026-07-16): Workshop addon `gungame_sounds` (ID **3766168370**) compilado por CLI (`resourcecompiler`) con 17 MP3 + 14 soundevents `gg.*` + MultiAddonManager v1.5.2. `UseSoundEvents: true` → respetan volumen del cliente. Probados in-game ✅
 - [ ] Plugin de extensión GG (repo `F:\git\gg-extensions\`, ahí ya vive GGTrails): winner effects (volar al ganar), MVP del líder, gg.intro/takenlead/lostlead/tiedlead, sonido inicio de ronda — vía GunGame API
 - [ ] Quake sounds (doublekill/headshot/firstblood del server viejo) — base `Kandru/cs2-quake-sounds`, MP3 en repo CSGO `sound/quake/`
 - [ ] Advertisements periódicos en chat (redactar mensajes nuevos; el cfg viejo no se commiteó)
@@ -154,6 +154,7 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 - [ ] Probar flujo completo: última kill → fin de partida → votación → cambio de mapa
 - [ ] Instalar CS2 RCON MCP y validar conexión
 - [ ] Evaluar extensiones extra (ver `docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord)
+- [x] **cs2-watch** (2026-07-17): panel admin web estilo HLSW propio — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros (RCON/A2S/logaddress_add_http), sin dependencia de CSS. Bitácora del día + gotchas del server en `docs/Bitacora-2026-07-17.md`; pendiente: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
 
 ---
 
@@ -162,6 +163,9 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 - `docs/CS2-GunGame-Paridad-CSGO.md` — **meta rectora**: mapeo completo servidor CSGO viejo → CS2 (gameplay, armas, sonidos, server cfg, plugins acompañantes).
 - `docs/CS2-GunGame-Estado-y-PlanDeInicio.md` — estado del ecosistema CS2/CSS, causas raíz (sonidos, votemap), plan de retoma paso a paso, tabla de versiones.
 - `docs/CS2-GunGame-Mejoras-Extra.md` — catálogo de plugins de extensión (visuales, datos/ranks, Discord) con prioridades sugeridas.
+- `docs/CS2-GunGame-Discord-Integracion.md` — investigación/contexto: integración Discord (ranking, feed en vivo, linking cuentas), recompensas a top players y monetización/donaciones. Base para plan futuro.
+- `docs/Bitacora-2026-07-16.md` / `docs/Bitacora-2026-07-17.md` — bitácoras de sesión: retoma+paridad+teamplay (16) y nacimiento de cs2-watch + gotchas del server (17).
+- `docs/Manual-Donaciones-KoFi.md` / `docs/Manual-Donaciones-GitHub-Sponsors.md` — manuales paso a paso pa' activar las cuentas de donación de cs2-watch.
 - `README.md` (raíz) — README del fork/upstream (comandos, cvars, instalación, FAQ).
 
 *Actualizar este archivo cuando cambien versiones, decisiones de arquitectura o convenciones.*
