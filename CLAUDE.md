@@ -188,6 +188,7 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 - `docs/CS2-GunGame-Mejoras-Extra.md` — catálogo de plugins de extensión (visuales, datos/ranks, Discord) con prioridades sugeridas.
 - `docs/CS2-GunGame-Discord-Integracion.md` — investigación/contexto: integración Discord (ranking, feed en vivo, linking cuentas), recompensas a top players y monetización/donaciones. Base para plan futuro.
 - `docs/Bitacora-2026-07-16.md` / `docs/Bitacora-2026-07-17.md` — bitácoras de sesión: retoma+paridad+teamplay (16) y nacimiento de cs2-watch + gotchas del server (17).
+- `docs/Bitacora-2026-09-11.md` — update del stack (CSS 1.0.374 / Metamod git1411 / CS2 25218825), el corte de SourceHook API 017 vs 018, mapas Workshop en loop sin GSLT, y **la lista de pendientes vigente**.
 - `docs/Manual-Donaciones-KoFi.md` / `docs/Manual-Donaciones-GitHub-Sponsors.md` — manuales paso a paso pa' activar las cuentas de donación de cs2-watch.
 - `README.md` (raíz) — README del fork/upstream (comandos, cvars, instalación, FAQ).
 
