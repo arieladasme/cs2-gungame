@@ -93,6 +93,14 @@ Error exacto, visible solo al recargar a mano (`meta load addons/counterstrikesh
 Fix: **git1411** (2026-08-31, último con API 017). Mismo corte parte MultiAddonManager: **v1.6 exige 018**,
 usar **v1.5.4**. Antes de subir Metamod, confirmar que la release de CSS ya compile contra la API nueva.
 
+**Gotcha (2026-09-11): mapas Workshop en loop de recarga sin login de Steam.** Con `sv_lan 1` y sin
+GSLT el server no está logueado en Steam, así que no puede montar los mapas del Workshop del pool
+(`fy_snow`, `fy_iceworld`, `aim_map`). Síntoma: al cambiar a uno, `OnMapEnd` dispara ~1 s después de
+`loaded` y el mapa se recarga en bucle — decenas de "Loading config" por minuto en el log de GG2 y
+cero kills. Pista previa en el log de Metamod: `[MultiAddonManager] DownloadAddon: ... addon ID is
+invalid or server is not logged on Steam`. Salir del loop: `changelevel` a un mapa stock por RCON.
+Para probar mapas Workshop hace falta GSLT (`sv_setsteamaccount`) y `sv_lan 0`.
+
 **Gotchas vividos (2026-07-16, update CS2 build 24209309):**
 - CSS 1.0.370 dejó de cargar SIN error visible — server corría casual puro ("el gungame no está activado"). Síntoma: cero líneas nuevas en `logs/log-all*.txt` tras el boot. Fix: actualizar Metamod snapshot + CSS release en `D:\cs2-stack\` y re-correr `stack-deploy.ps1`.
 - Con CSS nuevo pero plugin compilado contra API vieja: `[EROR] Error invoking callback` + `MissingMethodException` en cada kill → sin level-ups aunque el plugin "cargue". Fix: recompilar contra la API instalada.
@@ -157,7 +165,8 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 - [x] Adaptar server cfg CS2: hostname, bots, match cvars (2026-07-16; doc §4)
 - [x] GG1MapChooser v1.8.0 instalado; `ggmc_mapvote_start 25` (default de mapvote.cfg), `ChangeMapAfterWinDraw: true`, pool inicial 12 mapas stock en `GGMCmaps.json` (2026-07-16)
 - [ ] Probar flujo completo in-game: última kill → fin de partida → cambio al mapa votado
-- [x] Pool inicial curado (2026-07-16): 3 stock ar_* + 3 Workshop (fy_iceworld 3070238628, fy_snow 3592238209, aim_map 3070549948) en `GGMCmaps.json` — validar descarga ws en runtime
+- [x] Pool inicial curado (2026-07-16): 3 stock ar_* + 3 Workshop (fy_iceworld 3070238628, fy_snow 3592238209, aim_map 3070549948) en `GGMCmaps.json`
+- [ ] ⚠️ **Los 3 mapas Workshop del pool NO cargan en el server local** (2026-09-11): sin GSLT entran en loop de recarga (ver gotcha §4). Conseguir GSLT + `sv_lan 0`, o dejar el pool solo con mapas stock mientras se prueba local
 - [x] Sonidos listos (2026-07-16): Workshop addon `gungame_sounds` (ID **3766168370**) compilado por CLI (`resourcecompiler`) con 17 MP3 + 14 soundevents `gg.*` + MultiAddonManager v1.5.2. `UseSoundEvents: true` → respetan volumen del cliente. Probados in-game ✅
 - [ ] Plugin de extensión GG (repo `F:\git\gg-extensions\`, ahí ya vive GGTrails): winner effects (volar al ganar), MVP del líder, gg.intro/takenlead/lostlead/tiedlead, sonido inicio de ronda — vía GunGame API
 - [ ] Quake sounds (doublekill/headshot/firstblood del server viejo) — base `Kandru/cs2-quake-sounds`, MP3 en repo CSGO `sound/quake/`
