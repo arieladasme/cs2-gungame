@@ -139,7 +139,7 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 - **dotnet-claude-kit** (`codewithmukesh/dotnet-claude-kit`, MIT) — **plugin instalado (2026-07-16)**. Disponibles: ~45 skills C# (`dotnet-claude-kit:modern-csharp`, `build-fix`, `code-review`, `de-sloppify`, `testing`, ...) y 10 agentes .NET (`build-error-resolver`, `code-reviewer`, `refactor-cleaner`, `performance-analyst`, ...). Global tool del MCP Roslyn instalado (`cwm-roslyn-navigator` v0.7.0); el plugin trae su `.mcp.json` — el MCP conecta al **inicio de sesión** (verificar con `/mcp`; sin `.sln`, apuntarlo a `GG2.csproj`).
   - **Usar:** MCP Roslyn para navegar `gg2.cs` (~4500 líneas) por consultas semánticas (~30-150 tokens) en vez de leer el archivo entero; skills de C#/refactor; agente `build-error-resolver` para builds rotos.
   - **NO usar:** su scaffolding "clean architecture .NET 10" (Result pattern, capas, plantillas de API) — no aplica a un plugin CSS monolítico net8.0. Ignorar esos comandos. NO regenerar CLAUDE.md con `/dotnet-init` — este archivo es curado a mano.
-- **CS2 RCON MCP** (`v9rt3x/cs2-rcon-mcp`) — **pendiente**: requiere servidor CS2 corriendo (Fase 1+). Instalar cuando el dedicado esté arriba. Docker con env `HOST` / `SERVER_PORT` / `RCON_PASSWORD` (o `.server-env`); no exponer el puerto RCON público. Trae `rcon`, `status`, `list_workshop_maps`, `host_workshop_map`, `workshop_changelevel`.
+- **CS2 RCON MCP** (`v9rt3x/cs2-rcon-mcp`) — **pendiente, pero ya desbloqueado**: el dedicado está arriba, así que se puede instalar cuando se quiera. Hasta ahora el diagnóstico por RCON se hizo con un cliente Python improvisado. **Ojo:** CS2 bindea el RCON TCP en la IP de una interfaz virtual, no en `127.0.0.1` — sacarla de `netstat -ano | grep 27015` (2026-09-11 fue `172.28.32.1`, el 2026-07-17 `192.168.1.128`). Docker con env `HOST` / `SERVER_PORT` / `RCON_PASSWORD` (o `.server-env`); no exponer el puerto RCON público. Trae `rcon`, `status`, `list_workshop_maps`, `host_workshop_map`, `workshop_changelevel`.
 - **Repos de referencia clonados localmente** (referencia, no dependencia del build): `roflmuffin/CounterStrikeSharp` (API real, evita alucinar métodos), `ssypchenko/GG1MapChooser` (contrato `ggmc_mapvote_start`), `kus/cs2-modded-server` (`scripts/check-updates.sh`), **`arieladasme/csgo-gungame-plugin`** en `F:\git\csgo-gungame-plugin` (servidor CSGO original 2016-2020 — fuente de verdad de la paridad: configs, orden de armas, sonidos MP3, server.cfg) y **respaldo del intento CS2 anterior** en `F:\git\respaldo gungame algo malo, problemas con cambio de mapa\` (plugins CSS acompañantes: CS2-SimpleAdmin, MenuManager, PlayerSettings).
 
 > **SDK local:** solo .NET 10 SDK (preview) instalado; no hay .NET 8 SDK. `dotnet build GG2.csproj` (net8.0) funciona igual — el SDK descarga el targeting pack de net8. Si aparece un problema de build raro, sospechar del SDK preview antes que del código.
@@ -158,26 +158,42 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 ## 9. Estado actual / próximos pasos
 
-**Meta rectora (2026-07-16): paridad con el servidor CSGO original** — replicar en CS2 la configuración de gameplay, orden de armas, sonidos y ambiente del server viejo. Detalle completo y mapeos en `docs/CS2-GunGame-Paridad-CSGO.md`. **Requiere plan (Plan Mode) antes de ejecutar.**
+**Meta rectora: paridad con el servidor CSGO original** — replicar en CS2 la configuración de gameplay, orden de armas, sonidos y ambiente del server viejo. Detalle y mapeos en `docs/CS2-GunGame-Paridad-CSGO.md`. **Requiere plan (Plan Mode) antes de ejecutar.**
 
-- [x] Portar gameplay: `gungame.config.txt` (CSGO) → `gungame.json` (2026-07-16; valores en doc de paridad §1)
-- [x] Portar orden de armas: 37 niveles estilo CS 1.6 → `gungame_weapons.json` (2026-07-16)
-- [x] Adaptar server cfg CS2: hostname, bots, match cvars (2026-07-16; doc §4)
-- [x] GG1MapChooser v1.8.0 instalado; `ggmc_mapvote_start 25` (default de mapvote.cfg), `ChangeMapAfterWinDraw: true`, pool inicial 12 mapas stock en `GGMCmaps.json` (2026-07-16)
-- [ ] Probar flujo completo in-game: última kill → fin de partida → cambio al mapa votado
-- [x] Pool inicial curado (2026-07-16): 3 stock ar_* + 3 Workshop (fy_iceworld 3070238628, fy_snow 3592238209, aim_map 3070549948) en `GGMCmaps.json`
-- [ ] ⚠️ **Los 3 mapas Workshop del pool NO cargan en el server local** (2026-09-11): sin GSLT entran en loop de recarga (ver gotcha §4). Conseguir GSLT + `sv_lan 0`, o dejar el pool solo con mapas stock mientras se prueba local
-- [x] Sonidos listos (2026-07-16): Workshop addon `gungame_sounds` (ID **3766168370**) compilado por CLI (`resourcecompiler`) con 17 MP3 + 14 soundevents `gg.*` + MultiAddonManager v1.5.2. `UseSoundEvents: true` → respetan volumen del cliente. Probados in-game ✅
-- [ ] Plugin de extensión GG (repo `F:\git\gg-extensions\`, ahí ya vive GGTrails): winner effects (volar al ganar), MVP del líder, gg.intro/takenlead/lostlead/tiedlead, sonido inicio de ronda — vía GunGame API
-- [ ] Quake sounds (doublekill/headshot/firstblood del server viejo) — base `Kandru/cs2-quake-sounds`, MP3 en repo CSGO `sound/quake/`
-- [ ] Advertisements periódicos en chat (redactar mensajes nuevos; el cfg viejo no se commiteó)
-- [x] GGTrails (2026-07-16): estelas de colores en granadas — plugin propio en `F:\git\gg-extensions\GGTrails\`, desplegado
-- [ ] Admin (opcional): CS2-SimpleAdmin + admins.json del respaldo (credenciales nuevas)
-- ⚠️ Server con config de PRUEBA (7 niveles / 2 kills) — restaurar copiando `cfg_files/csgo/cfg/gungame/*.json` del repo al terminar las pruebas
-- [ ] Probar flujo completo: última kill → fin de partida → votación → cambio de mapa
-- [ ] Instalar CS2 RCON MCP y validar conexión
-- [ ] Evaluar extensiones extra (ver `docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord)
-- [x] **cs2-watch** (2026-07-17): panel admin web estilo HLSW propio — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros (RCON/A2S/logaddress_add_http), sin dependencia de CSS. Bitácora del día + gotchas del server en `docs/Bitacora-2026-07-17.md`; pendiente: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
+**Estado al 2026-09-11:** stack al día y verificado (ver `docs/Bitacora-2026-09-11.md`) — server local corriendo, los 4 plugins CSS cargan, cero errores, level-ups de bots confirmados en mapa stock. Lo que falta es, casi todo, contenido y extensiones; el único bloqueo técnico es el GSLT.
+
+### Bloqueante
+
+- [ ] **GSLT para el server local** (`sv_setsteamaccount` + `sv_lan 0`). Sin login de Steam los 3 mapas Workshop del pool entran en loop de recarga (gotcha §4) → imposible validar el flujo de cambio de mapa de punta a punta. Workaround mientras tanto: pool solo con mapas stock `ar_*`.
+- [ ] **Probar flujo completo in-game**: última kill → fin de partida → votación → cambio al mapa votado. (La mecánica dispara bien: GG1MapChooser eligió mapa solo; lo que falla es montarlo.)
+
+### Higiene del entorno
+
+- [ ] ⚠️ **Server con config de PRUEBA** (7 niveles / 2 kills / `TeamPlay 1`) — restaurar copiando `cfg_files/csgo/cfg/gungame/*.json` del repo a `D:\cs2-server\game\csgo\cfg\gungame\`.
+- [ ] Mover `sv_hibernate_when_empty 0` de `server.cfg` a `cfg/gamemode_casual_server.cfg` (el gamemode pisa `server.cfg`). Mismo criterio para el `bot_join_after_player 0` temporal.
+- [ ] **`F:\git\gg-extensions` no es repo git** — GGTrails vive ahí sin versionar. `git init` + primer commit antes de seguir sumando plugins.
+- [ ] Instalar **CS2 RCON MCP** y validar conexión (ya hay server corriendo; hasta ahora se usó un cliente RCON improvisado).
+
+### Extensiones pendientes (el grueso del desarrollo por delante)
+
+- [ ] **Plugin de extensión GG** (repo `F:\git\gg-extensions\`, ahí ya vive GGTrails): winner effects (volar al ganar), MVP del líder, `gg.intro`/`takenlead`/`lostlead`/`tiedlead`, sonido de inicio de ronda — vía GunGame API.
+- [ ] **Quake sounds propios**: el plugin `Kandru/cs2-quake-sounds` ya está instalado y cargando (26.08.1) con sus soundevents `QuakeSoundsD.*`; falta portar los MP3 del server viejo (repo CSGO `sound/quake/`: doublekill, headshot, firstblood) a un addon propio.
+- [ ] Advertisements periódicos en chat (redactar mensajes nuevos; el cfg viejo no se commiteó).
+- [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
+- [ ] Evaluar extensiones extra (`docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord).
+
+### Cerrado
+
+- [x] Gameplay portado: `gungame.config.txt` (CSGO) → `gungame.json` (2026-07-16; valores en doc de paridad §1)
+- [x] Orden de armas: 37 niveles estilo CS 1.6 → `gungame_weapons.json` (2026-07-16)
+- [x] Server cfg CS2: hostname, bots, match cvars (2026-07-16; doc §4)
+- [x] GG1MapChooser v1.8.0 + `ggmc_mapvote_start 25`, `ChangeMapAfterWinDraw: true` (2026-07-16)
+- [x] Pool curado: 3 stock `ar_*` + 3 Workshop en `GGMCmaps.json` (2026-07-16) — los Workshop bloqueados por GSLT, arriba
+- [x] **Sonidos custom** (2026-07-16): Workshop addon `gungame_sounds` (ID **3766168370**) compilado por CLI (`resourcecompiler`), 17 MP3 + 14 soundevents `gg.*`, montado con MultiAddonManager. `UseSoundEvents: true` → respetan volumen del cliente. Probados in-game ✅
+- [x] **GGTrails** (2026-07-16): estelas de colores en granadas — plugin propio, desplegado
+- [x] **Modo TEAMPLAY** (2026-07-16): nivel y pozo de kills por equipo estilo CS 1.6 — ver §4
+- [x] **cs2-watch** (2026-07-17): panel admin web estilo HLSW — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros, sin dependencia de CSS. Pendiente aparte: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
+- [x] **Stack al día** (2026-09-11): CS2 25218825 + Metamod git1411 + CSS 1.0.374 + MultiAddonManager v1.5.4 + QuakeSounds 26.08.1; GG2 y GGTrails recompilados. Verificado por RCON y log. Ver §4 y `docs/Bitacora-2026-09-11.md`
 
 ---
 

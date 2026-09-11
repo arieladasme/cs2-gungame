@@ -1,5 +1,7 @@
 # CS2 GunGame — Estado del Ecosistema y Plan de Retoma del Proyecto
 
+> **Estado 2026-09-11 — el plan de este documento YA SE EJECUTÓ.** El server local está instalado, el stack corriendo y el plugin desplegado. Se conserva por el contexto del §1–§5 (por qué SourceMod no aplica, causas raíz de sonidos y votemap), pero el checklist del §5 y la tabla del §6 son históricos: las versiones vigentes están en `CLAUDE.md` §4 y el estado del día en `docs/Bitacora-2026-09-11.md`.
+>
 > Documento de referencia generado el 1 de julio de 2026. Resume el estado actual del modding en CS2, el plugin de GunGame que usaste antes, el problema histórico con sonidos custom, el problema de votemap al terminar la partida, y un paso a paso para retomar el proyecto de tu propio servidor.
 
 ---
@@ -166,15 +168,18 @@ Hay reportes activos en el repo de CounterStrikeSharp sobre **crashes al cambiar
 
 ---
 
-## 6. Tabla resumen de versiones (al 1 julio 2026)
+## 6. Tabla resumen de versiones (histórica — al 1 julio 2026)
 
-| Componente | Versión / estado |
-|---|---|
-| SourceMod para CS2 | No existe, no viable |
-| Metamod:Source | v2 (dev build activo para Source 2) |
-| CounterStrikeSharp | Activo, releases frecuentes, .NET 8 |
-| cs2-gungame | v1.2.2 (9 mayo 2026) |
-| GG1MapChooser | v1.8.0 (11 mayo 2026) |
+> Desactualizada a propósito: es el retrato del ecosistema cuando se escribió el plan.
+> **Versiones vigentes: `CLAUDE.md` §4.**
+
+| Componente | Versión / estado (jul 2026) | Hoy (2026-09-11) |
+|---|---|---|
+| SourceMod para CS2 | No existe, no viable | sin cambio |
+| Metamod:Source | v2 (dev build activo) | git1411 (último con SourceHook API 017) |
+| CounterStrikeSharp | Activo, .NET 8 | v1.0.374, **.NET 10** |
+| cs2-gungame | v1.2.2 (9 mayo 2026) | v1.2.4 + teamplay local |
+| GG1MapChooser | v1.8.0 (11 mayo 2026) | v1.8.0 (sigue siendo el último) |
 
 ---
 
