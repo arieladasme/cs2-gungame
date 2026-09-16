@@ -175,6 +175,13 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
   GG1MapChooser y la votación jamás arrancaba (síntoma visible: `Can't change map after Win/Draw
   because _roundEndMap is null` y cambio a mapa aleatorio). El mismo comando suelto por RCON sí
   corre. No hay cvar que lo permita. Fix local: `ExecConfigFile` en gg2.cs.
+- **La misma whitelist aplica a los CVARS** (`DISALLOWED WORKSHOP CONVAR: <cvar>`): `mp_winlimit`,
+  `sv_tags`, `cs_AssistDamageThreshold` y `tv_enable` la reprueban. Importa para `mp_winlimit`, que
+  GunGame baja a 1 al terminar la partida y el cfg del gamemode no logra reponer — con un 1 colgado,
+  el mapa siguiente termina apenas un equipo gana **una ronda** y GG1MapChooser rota sin votación.
+  Fix local: `OnMapStart` lo devuelve a 0 desde el plugin.
+- `bot_difficulty` en `server.cfg` **no basta**: ese archivo solo corre al arrancar el server y el
+  gamemode repone la dificultad en cada mapa. Va también en `gamemode_casual_server.cfg`.
 - Commits: Conventional Commits en español (`feat:`, `fix:`), cuerpo en imperativo es-MX explicando el porqué si no es evidente.
 
 ---

@@ -905,6 +905,12 @@ namespace GunGame
         }
         private void OnMapStart(string name)
         {
+            // EndMultiplayerGameNormal drops mp_winlimit to 1 so the round that closes the match
+            // shows a team victory instead of a cancelled match, and nothing puts it back: CS2
+            // rejects the cvar from a gamemode cfg (DISALLOWED WORKSHOP CONVAR), so it can only be
+            // restored from here. A leftover 1 ends the next map as soon as a team wins one round,
+            // long before anyone reaches the last level.
+            ConVar.Find("mp_winlimit")?.SetValue(0);
             if (emergencyTimer != null)
             {
                 var timerToKill = emergencyTimer;
