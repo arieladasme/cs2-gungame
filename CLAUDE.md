@@ -218,7 +218,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       las 7 victorias ficticias de waha (`DELETE FROM ggextras_player_stats WHERE authid = '76561198001397523' AND month = '2026-09'`),
       el anuncio de prueba "Campeones de agosto 2026" en `#anuncios` y su fila en `ggextras_month_awards`. Después recargar GGExtras
       (subir de nuevo su DLL) para que `#ranking` se reescriba y los roles Top se ajusten. Mientras existan también salen en `!top`.
-- [ ] **Developer Portal de `GKS Bot`** (no se puede por API): desactivar "Public Bot"; en OAuth2 → Redirects agregar `https://gks.goadatti.com/vincular/`; generar el Client Secret y ponerlo en `DiscordClientSecret` del `GGExtras.json` del server. Sin eso, `/vincular` solo ofrece el código para el juego.
+- [ ] **Desactivar "Bot público"** de `GKS Bot` (Developer Portal → Bot). Discord no lo deja mientras exista enlace de instalación: primero Instalación → Enlace de instalación → Ninguno. Redirect OAuth y Client Secret ya configurados (2026-09-16).
 - [ ] Bajar `sv_hibernate_when_empty` a su valor real: quedó en 0 para pruebas.
 - [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
       de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
