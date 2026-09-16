@@ -227,6 +227,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 ### Cerrado
 
+- [x] **Discord de la comunidad** (2026-09-16): `GKS - GunGame Killers`, invitación `discord.gg/GYc5g36c2p`. Configurado por API con `GKS Bot`: canales, rol Moderador, Comunidad, AutoMod y bienvenida con reglas e IP. GG1MapChooser postea el mapa en juego en `#estado-servidor` (`DiscordSettings`). Pendiente: feed de `#ganadores` desde GGExtras
 - [x] **Servidor de producción** (2026-09-15): RDSNode Santiago, `45.236.90.224:26260`, público y listado. Stack completo, stats en MySQL, sonidos custom, 7 ms de latencia
 - [x] **Ciclo de juego verificado in-game** (2026-09-15): progresión de 37 niveles, votación de mapa al nivel 36 y cambio al mapa votado, sin loops
 - [x] **Causa raíz del loop de mapas** (2026-09-15): addon del Workshop oculto, no el GSLT — ver §4
