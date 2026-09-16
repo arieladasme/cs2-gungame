@@ -93,13 +93,30 @@ Error exacto, visible solo al recargar a mano (`meta load addons/counterstrikesh
 Fix: **git1411** (2026-08-31, último con API 017). Mismo corte parte MultiAddonManager: **v1.6 exige 018**,
 usar **v1.5.4**. Antes de subir Metamod, confirmar que la release de CSS ya compile contra la API nueva.
 
-**Gotcha (2026-09-11): mapas Workshop en loop de recarga sin login de Steam.** Con `sv_lan 1` y sin
-GSLT el server no está logueado en Steam, así que no puede montar los mapas del Workshop del pool
-(`fy_snow`, `fy_iceworld`, `aim_map`). Síntoma: al cambiar a uno, `OnMapEnd` dispara ~1 s después de
-`loaded` y el mapa se recarga en bucle — decenas de "Loading config" por minuto en el log de GG2 y
-cero kills. Pista previa en el log de Metamod: `[MultiAddonManager] DownloadAddon: ... addon ID is
-invalid or server is not logged on Steam`. Salir del loop: `changelevel` a un mapa stock por RCON.
-Para probar mapas Workshop hace falta GSLT (`sv_setsteamaccount`) y `sv_lan 0`.
+**Gotcha (2026-09-15, CORRIGE el diagnóstico anterior): el loop de recarga de mapas lo causa
+un addon del Workshop inaccesible, NO la falta de GSLT.** Síntoma: tras *cualquier*
+`changelevel` el mapa se recarga solo 50-120 veces por minuto, expulsa a los jugadores, las
+armas del piso desaparecen y el warmup nunca termina. Causa: MultiAddonManager intenta montar
+los IDs de `mm_extra_addons` en cada carga de mapa; si uno no se puede descargar, reintenta y
+el mapa se recarga, lo que vuelve a disparar el montaje. Acá el addon de sonidos
+(`3766168370`) estaba en visibilidad **"Oculto"** en el Workshop — *Oculto* bloquea la descarga
+para todos menos el autor, a diferencia de *Sin listar*, que sí funciona. Verificación rápida:
+abrir `steamcommunity.com/sharedfiles/filedetails/?id=<ID>` sin sesión; si da "Error", el
+server tampoco lo puede bajar. Medido: con el addon oculto 93 y 53 recargas, sin él 0.
+**El GSLT no tenía nada que ver** — el loop se reprodujo con GSLT válido (`secure public` y
+Steam ID de gameserver asignado) y en mapas **stock**. Vaciar `mm_extra_addons` por RCON no
+alcanza: es memoria y cualquier reinicio recarga el archivo.
+
+**Trampa de medición (misma sesión):** CSS rota el log a medianoche **UTC**
+(`log-all<AAAAMMDD>.txt`). Contar recargas con `grep -c` contra el archivo del día anterior
+siempre da "0 nuevas" porque ese archivo ya no se escribe. Resolver siempre el log más reciente
+por `modified_at` antes de medir; dos conclusiones de "ya está resuelto" salieron de ahí y eran
+falsas.
+
+**Gotcha: `mp_maxrounds 0` rompe a GG1MapChooser.** Parece el valor honesto porque GunGame
+termina al llegar al último nivel, pero el mapchooser calcula desde ahí su presupuesto de
+rondas y con `0` queda en `RemainingRounds 0`, disparando su flujo de fin de mapa en cada tick.
+Dejar `15`; nunca se alcanza porque `mp_roundtime` son 60 minutos.
 
 **Gotchas vividos (2026-07-16, update CS2 build 24209309):**
 - CSS 1.0.370 dejó de cargar SIN error visible — server corría casual puro ("el gungame no está activado"). Síntoma: cero líneas nuevas en `logs/log-all*.txt` tras el boot. Fix: actualizar Metamod snapshot + CSS release en `D:\cs2-stack\` y re-correr `stack-deploy.ps1`.
@@ -160,19 +177,34 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 **Meta rectora: paridad con el servidor CSGO original** — replicar en CS2 la configuración de gameplay, orden de armas, sonidos y ambiente del server viejo. Detalle y mapeos en `docs/CS2-GunGame-Paridad-CSGO.md`. **Requiere plan (Plan Mode) antes de ejecutar.**
 
-**Estado al 2026-09-11:** stack al día y verificado (ver `docs/Bitacora-2026-09-11.md`) — server local corriendo, los 4 plugins CSS cargan, cero errores, level-ups de bots confirmados en mapa stock. Lo que falta es, casi todo, contenido y extensiones; el único bloqueo técnico es el GSLT.
+**Estado al 2026-09-15:** el proyecto pasó de "server local de pruebas" a **producción**.
+Servidor contratado en **RDSNode** (Santiago, Ryzen 7 9700X), panel Pterodactyl,
+`45.236.90.224:26260`, hostname `🔪 || GKS - GunGame Killers - 1.6 Style ||`, público y listado
+en el browser con 7 ms de latencia. Stack completo cargando (Metamod git1411 + CSS 1.0.374 +
+MultiAddonManager v1.5.4 + los 4 plugins), stats en MySQL, sonidos custom funcionando, y el
+ciclo completo verificado in-game: progresión de niveles, votación de mapa y cambio al mapa
+votado. Detalle de acceso y operación en la memoria del proyecto.
+
+**El bloqueante del GSLT quedó cerrado** y resultó ser un falso culpable: el loop de mapas que
+lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 ### Bloqueante
 
-- [ ] **GSLT para el server local** (`sv_setsteamaccount` + `sv_lan 0`). Sin login de Steam los 3 mapas Workshop del pool entran en loop de recarga (gotcha §4) → imposible validar el flujo de cambio de mapa de punta a punta. Workaround mientras tanto: pool solo con mapas stock `ar_*`.
-- [ ] **Probar flujo completo in-game**: última kill → fin de partida → votación → cambio al mapa votado. (La mecánica dispara bien: GG1MapChooser eligió mapa solo; lo que falla es montarlo.)
+- [ ] Nada bloqueante. El servidor está operativo y jugable.
 
 ### Higiene del entorno
 
-- [ ] ⚠️ **Server con config de PRUEBA** (7 niveles / 2 kills / `TeamPlay 1`) — restaurar copiando `cfg_files/csgo/cfg/gungame/*.json` del repo a `D:\cs2-server\game\csgo\cfg\gungame\`.
-- [ ] Mover `sv_hibernate_when_empty 0` de `server.cfg` a `cfg/gamemode_casual_server.cfg` (el gamemode pisa `server.cfg`). Mismo criterio para el `bot_join_after_player 0` temporal.
-- [ ] **`F:\git\gg-extensions` no es repo git** — GGTrails vive ahí sin versionar. `git init` + primer commit antes de seguir sumando plugins.
-- [ ] Instalar **CS2 RCON MCP** y validar conexión (ya hay server corriendo; hasta ahora se usó un cliente RCON improvisado).
+- [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
+      en el transcript de la sesión del 2026-09-15.
+- [ ] **8 commits sin pushear** a `origin/main`.
+- [ ] **`F:\git\gg-extensions` no es repo git** — GGTrails vive ahí sin versionar.
+- [ ] Reponer los 3 mapas Workshop al pool (`GGMCmaps.json`): se sacaron durante el diagnóstico
+      del loop creyendo que eran la causa, y no lo eran. IDs: `fy_snow_legacy` 3592238209,
+      `fy_iceworld` 3070238628, `aim_map` 3070549948.
+- [ ] Bajar `sv_hibernate_when_empty` a su valor real: quedó en 0 para pruebas.
+- [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
+      de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
+      confirmar que la nueva pase.
 
 ### Extensiones pendientes (el grueso del desarrollo por delante)
 
@@ -184,6 +216,9 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 ### Cerrado
 
+- [x] **Servidor de producción** (2026-09-15): RDSNode Santiago, `45.236.90.224:26260`, público y listado. Stack completo, stats en MySQL, sonidos custom, 7 ms de latencia
+- [x] **Ciclo de juego verificado in-game** (2026-09-15): progresión de 37 niveles, votación de mapa al nivel 36 y cambio al mapa votado, sin loops
+- [x] **Causa raíz del loop de mapas** (2026-09-15): addon del Workshop oculto, no el GSLT — ver §4
 - [x] Gameplay portado: `gungame.config.txt` (CSGO) → `gungame.json` (2026-07-16; valores en doc de paridad §1)
 - [x] Orden de armas: 37 niveles estilo CS 1.6 → `gungame_weapons.json` (2026-07-16)
 - [x] Server cfg CS2: hostname, bots, match cvars (2026-07-16; doc §4)
