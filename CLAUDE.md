@@ -38,7 +38,7 @@ dotnet build GG2.csproj -c Release
 
 - **Framework:** `net10.0` (GG2.csproj y el submódulo GunGameAPI — ambos bumpeados localmente el 2026-07-16), `Nullable=enable`, `ImplicitUsings=enable`, `AllowUnsafeBlocks=true`.
 - **No hay tests automatizados.** La verificación es en runtime: desplegar los DLLs a un servidor CS2 y probar. Usar el **CS2 RCON MCP** (ver §7) para `css_plugins list`, reiniciar y monitorear logs sin salir de la sesión.
-- **Deploy manual:** DLLs compilados → `csgo/addons/counterstrikesharp/plugins/GG2`; configs de `cfg_files/csgo/cfg/gungame/` → `csgo/cfg/gungame`; `GeoLite2-Country.mmdb` → `csgo/cfg`.
+- **Deploy manual:** DLLs compilados → `csgo/addons/counterstrikesharp/plugins/GG2`, **salvo `GunGameAPI.dll`, que va en `csgo/addons/counterstrikesharp/shared/GunGameAPI/`** (y no dentro de `GG2`): si cada plugin carga su propia copia, el tipo `IAPI` no coincide y ningún plugin de extensión obtiene la capability `gungame:api`. CSS recarga solo un plugin cuando cambia su DLL; no hace falta `css_plugins reload` después de subirla, y lanzarlo encima falla con `Assembly with same name is already loaded`; configs de `cfg_files/csgo/cfg/gungame/` → `csgo/cfg/gungame`; `GeoLite2-Country.mmdb` → `csgo/cfg`.
 - `+game_type 0 +game_mode 0` es requisito de gungame en el launch config del servidor.
 
 ---
@@ -227,7 +227,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 ### Cerrado
 
-- [x] **Discord de la comunidad** (2026-09-16): `GKS - GunGame Killers`, invitación `discord.gg/GYc5g36c2p`. Configurado por API con `GKS Bot`: canales, rol Moderador, Comunidad, AutoMod y bienvenida con reglas e IP. GG1MapChooser postea el mapa en juego en `#estado-servidor` (`DiscordSettings`). Pendiente: feed de `#ganadores` desde GGExtras
+- [x] **Discord de la comunidad** (2026-09-16): `GKS - GunGame Killers`, invitación `discord.gg/GYc5g36c2p`. Configurado por API con `GKS Bot`: canales, rol Moderador, Comunidad, AutoMod y bienvenida con reglas e IP. GG1MapChooser postea el mapa en juego en `#estado-servidor` (`DiscordSettings`). `#reglas` con reglas y la config del GunGame. GGExtras 0.2.0 anuncia a los ganadores humanos en `#ganadores` y `#general` (webhooks solo en el `GGExtras.json` del server)
 - [x] **Servidor de producción** (2026-09-15): RDSNode Santiago, `45.236.90.224:26260`, público y listado. Stack completo, stats en MySQL, sonidos custom, 7 ms de latencia
 - [x] **Ciclo de juego verificado in-game** (2026-09-15): progresión de 37 niveles, votación de mapa al nivel 36 y cambio al mapa votado, sin loops
 - [x] **Causa raíz del loop de mapas** (2026-09-15): addon del Workshop oculto, no el GSLT — ver §4
