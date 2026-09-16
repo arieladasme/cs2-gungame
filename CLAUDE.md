@@ -196,11 +196,11 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
       en el transcript de la sesión del 2026-09-15.
-- [ ] **8 commits sin pushear** a `origin/main`.
 - [ ] **`F:\git\gg-extensions` no es repo git** — GGTrails vive ahí sin versionar.
-- [ ] Reponer los 3 mapas Workshop al pool (`GGMCmaps.json`): se sacaron durante el diagnóstico
-      del loop creyendo que eran la causa, y no lo eran. IDs: `fy_snow_legacy` 3592238209,
-      `fy_iceworld` 3070238628, `aim_map` 3070549948.
+- [x] ~~Reponer los 3 mapas Workshop al pool~~ (2026-09-15): `GGMCmaps.json` quedó con 6 mapas —
+      3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map` 3070549948.
+      Aplicado en caliente con RCON `reloadmaps` (comando de GG1MapChooser, releé el archivo sin
+      reiniciar el server ni cortar la partida en curso).
 - [ ] Bajar `sv_hibernate_when_empty` a su valor real: quedó en 0 para pruebas.
 - [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
       de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
@@ -209,7 +209,6 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 ### Extensiones pendientes (el grueso del desarrollo por delante)
 
 - [ ] **Plugin de extensión GG** (repo `F:\git\gg-extensions\`, ahí ya vive GGTrails): winner effects (volar al ganar), MVP del líder, `gg.intro`/`takenlead`/`lostlead`/`tiedlead`, sonido de inicio de ronda — vía GunGame API.
-- [ ] **Quake sounds propios**: el plugin `Kandru/cs2-quake-sounds` ya está instalado y cargando (26.08.1) con sus soundevents `QuakeSoundsD.*`; falta portar los MP3 del server viejo (repo CSGO `sound/quake/`: doublekill, headshot, firstblood) a un addon propio.
 - [ ] Advertisements periódicos en chat (redactar mensajes nuevos; el cfg viejo no se commiteó).
 - [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
 - [ ] Evaluar extensiones extra (`docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord).
@@ -224,6 +223,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [x] Server cfg CS2: hostname, bots, match cvars (2026-07-16; doc §4)
 - [x] GG1MapChooser v1.8.0 + `ggmc_mapvote_start 25`, `ChangeMapAfterWinDraw: true` (2026-07-16)
 - [x] Pool curado: 3 stock `ar_*` + 3 Workshop en `GGMCmaps.json` (2026-07-16) — los Workshop bloqueados por GSLT, arriba
+- [x] **Quake sounds propios** (2026-09-15): MP3 del server CSGO portados a addon propio
 - [x] **Sonidos custom** (2026-07-16): Workshop addon `gungame_sounds` (ID **3766168370**) compilado por CLI (`resourcecompiler`), 17 MP3 + 14 soundevents `gg.*`, montado con MultiAddonManager. `UseSoundEvents: true` → respetan volumen del cliente. Probados in-game ✅
 - [x] **GGTrails** (2026-07-16): estelas de colores en granadas — plugin propio, desplegado
 - [x] **Modo TEAMPLAY** (2026-07-16): nivel y pozo de kills por equipo estilo CS 1.6 — ver §4
