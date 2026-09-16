@@ -227,7 +227,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [x] **Sonidos custom** (2026-07-16): Workshop addon `gungame_sounds` (ID **3766168370**) compilado por CLI (`resourcecompiler`), 17 MP3 + 14 soundevents `gg.*`, montado con MultiAddonManager. `UseSoundEvents: true` → respetan volumen del cliente. Probados in-game ✅
 - [x] **GGTrails** (2026-07-16): estelas de colores en granadas — plugin propio, desplegado
 - [x] **Modo TEAMPLAY** (2026-07-16): nivel y pozo de kills por equipo estilo CS 1.6 — ver §4
-- [x] **cs2-watch** (2026-07-17): panel admin web estilo HLSW — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros, sin dependencia de CSS. Pendiente aparte: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
+- [x] **cs2-watch** (2026-07-17, validado contra producción 2026-09-15): panel admin web estilo HLSW — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros, sin dependencia de CSS. Verificado con humano real conectado: scoreboard con SteamID y ping, kill feed, chat y `say`, quick commands. Corre local + túnel cloudflared porque Pterodactyl no lo aloja; el `ingest_url` del túnel es efímero y hay que re-registrarlo cada vez. Pendiente aparte: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
 - [x] **Stack al día** (2026-09-11): CS2 25218825 + Metamod git1411 + CSS 1.0.374 + MultiAddonManager v1.5.4 + QuakeSounds 26.08.1; GG2 y GGTrails recompilados. Verificado por RCON y log. Ver §4 y `docs/Bitacora-2026-09-11.md`
 
 ---
