@@ -213,7 +213,11 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map` 3070549948.
       Aplicado en caliente con RCON `reloadmaps` (comando de GG1MapChooser, releé el archivo sin
       reiniciar el server ni cortar la partida en curso).
-- [ ] **Borrar los jugadores de prueba del ranking** (cargados 2026-09-16): `DELETE FROM gungame_playerdata WHERE authid LIKE 'TEST\_%'` y `DELETE FROM ggextras_knife_kills WHERE authid LIKE 'TEST\_%'`, y recargar GGExtras (subir de nuevo su DLL) para que `#ranking` se reescriba. Mientras existan también salen en `!top`.
+- [ ] **Borrar los datos de prueba del ranking** (cargados 2026-09-16), después de probar `!discord` en el juego:
+      `DELETE FROM gungame_playerdata WHERE authid LIKE 'TEST\_%'`, `DELETE FROM ggextras_player_stats WHERE authid LIKE 'TEST\_%'`,
+      las 7 victorias ficticias de waha (`DELETE FROM ggextras_player_stats WHERE authid = '76561198001397523' AND month = '2026-09'`),
+      el anuncio de prueba "Campeones de agosto 2026" en `#anuncios` y su fila en `ggextras_month_awards`. Después recargar GGExtras
+      (subir de nuevo su DLL) para que `#ranking` se reescriba y los roles Top se ajusten. Mientras existan también salen en `!top`.
 - [ ] Bajar `sv_hibernate_when_empty` a su valor real: quedó en 0 para pruebas.
 - [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
       de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
@@ -228,7 +232,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 ### Cerrado
 
-- [x] **Discord de la comunidad** (2026-09-16): `GKS - GunGame Killers`, invitación `discord.gg/GYc5g36c2p`. Configurado por API con `GKS Bot`: canales, rol Moderador, Comunidad, AutoMod y bienvenida con reglas e IP. GG1MapChooser postea el mapa en juego en `#estado-servidor` (`DiscordSettings`). `#reglas` con reglas y la config del GunGame. GGExtras 0.3.0 anuncia a los ganadores humanos en `#ganadores` y `#general`, y mantiene en `#ranking` el top 10 de ganadores y el de acuchilladores (tabla propia `ggextras_knife_kills`, cuenta desde el 2026-09-16) editando un único mensaje (lee MySQL con las credenciales de `gungame-db.json`; webhooks solo en el `GGExtras.json` del server)
+- [x] **Discord de la comunidad** (2026-09-16): `GKS - GunGame Killers`, invitación `discord.gg/GYc5g36c2p`. Configurado por API con `GKS Bot`: canales, rol Moderador, Comunidad, AutoMod y bienvenida con reglas e IP. GG1MapChooser postea el mapa en juego en `#estado-servidor` (`DiscordSettings`). `#reglas` con reglas y la config del GunGame. GGExtras 0.3.0 anuncia a los ganadores humanos en `#ganadores` y `#general`, y mantiene en `#ranking` dos mensajes editados en el lugar: histórico (ganadores y acuchilladores) y del mes. GGExtras 0.6.0 además: anuncia en `#anuncios` a los campeones del mes que cerró, vincula Steam↔Discord con `!discord` (código por DM) y da los roles Top 1/2/3/10 al top 10 del mes, y avisa en el chat cuando entra un top 3. Tablas propias: `ggextras_player_stats`, `ggextras_discord_links`, `ggextras_month_awards` (lee MySQL con las credenciales de `gungame-db.json`; webhooks solo en el `GGExtras.json` del server)
 - [x] **Servidor de producción** (2026-09-15): RDSNode Santiago, `45.236.90.224:26260`, público y listado. Stack completo, stats en MySQL, sonidos custom, 7 ms de latencia
 - [x] **Ciclo de juego verificado in-game** (2026-09-15): progresión de 37 niveles, votación de mapa al nivel 36 y cambio al mapa votado, sin loops
 - [x] **Causa raíz del loop de mapas** (2026-09-15): addon del Workshop oculto, no el GSLT — ver §4
