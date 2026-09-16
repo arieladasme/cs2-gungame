@@ -1195,6 +1195,17 @@ namespace GunGame
                             PlayConfiguredSound("WarmupTimer");
                             //                            PlaySound(null!, Config.WarmupTimerSound);
                         }
+
+                        // Warmup nades are meant to be endless, but the only refill is
+                        // EventHegrenadeDetonateHandler: knife someone and you stay empty for the
+                        // rest of the round. This tick already runs every second, so top up from
+                        // here as well. Every third second, not every one, so a thrown grenade
+                        // detonates before its replacement arrives instead of stacking two.
+                        if (Config.WarmupNades && WarmupCounter % 3 == 0
+                            && !HasWeapon(playerController, "weapon_hegrenade"))
+                        {
+                            TryGiveNamedItem(playerController, "weapon_hegrenade", "EndOfWarmup");
+                        }
                     }
                 }
                 return;
