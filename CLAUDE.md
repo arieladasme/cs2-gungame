@@ -82,7 +82,7 @@ Puntos clave:
 
 **Feature local mayor: modo TEAMPLAY (2026-07-16)** — `gg_teamplay` estilo CS 1.6 (AMXX): nivel y pozo de kills compartidos por equipo (meta = req individual × jugadores, mods cuchillo 0.33 / HE 0.50), robo acredita el req individual al pozo, victoria de EQUIPO real vía `TerminateRound`. Config `TeamPlay` 0/1/2 + comando `gg_teamplay` (override en memoria — `LoadConfig` no lo pisa). Región `#region Teamplay` en gg2.cs + branches `IsTeamplayActive`. Candidato a PR upstream.
 
-**Divergencias locales vs upstream v1.2.4 (tras merge 2026-07-16 — upstream ya trae net10/1.0.371/VelocityModifier):** (1) `ReloadActiveWeapon`: `SetStateChanged` a `m_iClip1` en vez de `m_pReserveAmmo` — revive `ReloadWeapon: true` (recarga al matar); (2) `StartTripleEffects`: timer 0.25s re-aplicando `VelocityModifier` mientras dura el bonus multi-nivel (el engine lo recupera a 1.0 solo — con una sola asignación el efecto no se percibe; upstream lo asigna una vez); (3) `AlltalkOnWin`: agrega `sv_alltalk` junto a `sv_full_alltalk`. Candidatos a PR upstream. Al mergear upstream nuevo, verificar que sobrevivan (grep `m_iClip1`, `speedTimer`, `sv_alltalk`).
+**Divergencias locales vs upstream v1.2.4 (tras merge 2026-07-16 — upstream ya trae net10/1.0.371/VelocityModifier):** (1) `ReloadActiveWeapon`: `SetStateChanged` a `m_iClip1` en vez de `m_pReserveAmmo` — revive `ReloadWeapon: true` (recarga al matar); (2) `StartTripleEffects`: timer 0.25s re-aplicando `VelocityModifier` mientras dura el bonus multi-nivel (el engine lo recupera a 1.0 solo — con una sola asignación el efecto no se percibe; upstream lo asigna una vez); (3) `AlltalkOnWin`: agrega `sv_alltalk` junto a `sv_full_alltalk`; (4) `ExecConfigFile`: los cfg del config folder se ejecutan leyendo sus líneas, no con `exec` (ver gotcha en §8 — con `exec` la votación de mapa nunca arrancaba). Candidatos a PR upstream. Al mergear upstream nuevo, verificar que sobrevivan (grep `m_iClip1`, `speedTimer`, `sv_alltalk`, `ExecConfigFile`).
 
 **Gotcha mayor (2026-09-11): Metamod más nuevo NO es mejor.** El 2026-09-08 Metamod bumpeó la
 SourceHook API a **018** (commit "Bump MMS Api version, and min load version", desde el snapshot
@@ -169,6 +169,12 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 - Antes de actualizar a una nueva versión de cs2-gungame o GG1MapChooser, **leer sus `RELEASE_NOTES.md`** — los formatos de config cambian entre versiones.
 - Antes de llamar "bug de gungame" a algo, descartar primero: versiones desactualizadas de Metamod/CSS y conflicto entre plugins de map management en paralelo.
 - Reproducir sonidos por nombre de soundevent, no por ruta.
+- **CS2 descarta los comandos de plugins CSS dentro de un `exec`** (2026-09-15): valida cada línea
+  del cfg contra una whitelist del engine y bota el archivo entero con `DISALLOWED WORKSHOP
+  COMMANDS: <cmd>` + `contains invalid commands`. Por eso `gungame.mapvote.cfg` nunca llegaba a
+  GG1MapChooser y la votación jamás arrancaba (síntoma visible: `Can't change map after Win/Draw
+  because _roundEndMap is null` y cambio a mapa aleatorio). El mismo comando suelto por RCON sí
+  corre. No hay cvar que lo permita. Fix local: `ExecConfigFile` en gg2.cs.
 - Commits: Conventional Commits en español (`feat:`, `fix:`), cuerpo en imperativo es-MX explicando el porqué si no es evidente.
 
 ---

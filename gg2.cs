@@ -1162,7 +1162,7 @@ namespace GunGame
             {
                 Logger.LogInformation("warmupTimer is not null but should be");
             }
-            Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.warmupstart.cfg");
+            ExecConfigFile("gungame.warmupstart.cfg");
         }
         public void EndOfWarmup()
         {
@@ -1243,7 +1243,7 @@ namespace GunGame
                                     }
                                 }); */
 
-                Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.warmupend.cfg");
+                ExecConfigFile("gungame.warmupend.cfg");
             }
             Console.WriteLine("WarmUp End");
 
@@ -4039,6 +4039,26 @@ namespace GunGame
                 return oldLevel;
             }
         }
+        // CS2 checks every command inside an `exec`ed cfg against an engine whitelist and drops the
+        // whole file when one fails ("DISALLOWED WORKSHOP COMMANDS: <cmd>"). Commands registered by
+        // CounterStrikeSharp plugins never pass it, so gungame.mapvote.cfg silently never reached
+        // GG1MapChooser and no map vote ever started. Running the lines ourselves skips the check.
+        private void ExecConfigFile(string fileName)
+        {
+            string path = Server.GameDirectory + "/csgo/cfg/" + GGVariables.Instance.ActiveConfigFolder + "/" + fileName;
+            if (!File.Exists(path))
+            {
+                Logger.LogInformation($"Config file {fileName} not found, nothing to execute");
+                return;
+            }
+            foreach (string line in File.ReadAllLines(path))
+            {
+                string command = line.Trim();
+                if (command.Length == 0 || command.StartsWith("//"))
+                    continue;
+                Server.ExecuteCommand(command);
+            }
+        }
         // Level-based one-shot triggers (mapvote / disable rtv / friendly fire).
         // Extracted from ChangeLevel so the teamplay flow can reuse them per team level.
         private void ApplyLevelThresholds(int Level)
@@ -4046,13 +4066,13 @@ namespace GunGame
             if (!GGVariables.Instance.IsVotingCalled && Level > (GGVariables.Instance.WeaponOrderCount - Config.VoteLevelLessWeaponCount))
             {
                 GGVariables.Instance.IsVotingCalled = true;
-                Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.mapvote.cfg");
+                ExecConfigFile("gungame.mapvote.cfg");
             }
 
             if (Config.DisableRtvLevel > 0 && !GGVariables.Instance.IsCalledDisableRtv && Level >= Config.DisableRtvLevel)
             {
                 GGVariables.Instance.IsCalledDisableRtv = true;
-                Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.disable_rtv.cfg");
+                ExecConfigFile("gungame.disable_rtv.cfg");
             }
 
             if (Config.EnableFriendlyFireLevel > 0 && !GGVariables.Instance.IsCalledEnableFriendlyFire && Level >= Config.EnableFriendlyFireLevel)
@@ -4590,12 +4610,12 @@ namespace GunGame
             /*            var gameEnd = NativeAPI.CreateEvent("game_end", true);
                         NativeAPI.SetEventInt(gameEnd,"winner",2);
                         NativeAPI.FireEvent(gameEnd, false); */
-            Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.gameend.cfg");
+            ExecConfigFile("gungame.gameend.cfg");
         }
         private void EndMultiplayerGameNormal()
         {
             Logger.LogInformation("EndMultiplayerGameNormal");
-            Server.ExecuteCommand("exec " + GGVariables.Instance.ActiveConfigFolder + "/gungame.gameend.cfg");
+            ExecConfigFile("gungame.gameend.cfg");
             var mp_timelimit = ConVar.Find("mp_timelimit");
             var mp_fraglimit = ConVar.Find("mp_fraglimit");
             var mp_maxrounds = ConVar.Find("mp_maxrounds");
