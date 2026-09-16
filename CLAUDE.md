@@ -196,7 +196,6 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
       en el transcript de la sesión del 2026-09-15.
-- [ ] **`F:\git\gg-extensions` no es repo git** — GGTrails vive ahí sin versionar.
 - [x] ~~Reponer los 3 mapas Workshop al pool~~ (2026-09-15): `GGMCmaps.json` quedó con 6 mapas —
       3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map` 3070549948.
       Aplicado en caliente con RCON `reloadmaps` (comando de GG1MapChooser, releé el archivo sin
@@ -208,7 +207,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 ### Extensiones pendientes (el grueso del desarrollo por delante)
 
-- [ ] **Plugin de extensión GG** (repo `F:\git\gg-extensions\`, ahí ya vive GGTrails): winner effects (volar al ganar), MVP del líder, `gg.intro`/`takenlead`/`lostlead`/`tiedlead`, sonido de inicio de ronda — vía GunGame API.
+- [ ] **Plugin de extensión GG** — `GGExtras` en `F:\git\gg-extensions\` (ya repo git, junto a GGTrails). Arrancó con el mensaje de bienvenida; faltan winner effects (volar al ganar), MVP del líder, `gg.intro`/`takenlead`/`lostlead`/`tiedlead`, sonido de inicio de ronda y los webhooks de Discord — vía GunGame API.
 - [ ] Advertisements periódicos en chat (redactar mensajes nuevos; el cfg viejo no se commiteó).
 - [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
 - [ ] Evaluar extensiones extra (`docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord).
@@ -225,6 +224,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [x] Pool curado: 3 stock `ar_*` + 3 Workshop en `GGMCmaps.json` (2026-07-16) — los Workshop bloqueados por GSLT, arriba
 - [x] **Quake sounds propios** (2026-09-15): MP3 del server CSGO portados a addon propio
 - [x] **Sonidos custom** (2026-07-16): Workshop addon `gungame_sounds` (ID **3766168370**) compilado por CLI (`resourcecompiler`), 17 MP3 + 14 soundevents `gg.*`, montado con MultiAddonManager. `UseSoundEvents: true` → respetan volumen del cliente. Probados in-game ✅
+- [x] **GGExtras — bienvenida** (2026-09-15): center HTML + chat al conectar, textos en config JSON. CS2 **no tiene** el MOTD HTML de CSGO (Source 2 no porta el panel VGUI; `find html` en el server no devuelve ni un cvar). Repo `gg-extensions` versionado en el mismo paso
 - [x] **GGTrails** (2026-07-16): estelas de colores en granadas — plugin propio, desplegado
 - [x] **Modo TEAMPLAY** (2026-07-16): nivel y pozo de kills por equipo estilo CS 1.6 — ver §4
 - [x] **cs2-watch** (2026-07-17, validado contra producción 2026-09-15): panel admin web estilo HLSW — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros, sin dependencia de CSS. Verificado con humano real conectado: scoreboard con SteamID y ping, kill feed, chat y `say`, quick commands. Corre local + túnel cloudflared porque Pterodactyl no lo aloja; el `ingest_url` del túnel es efímero y hay que re-registrarlo cada vez. Pendiente aparte: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
