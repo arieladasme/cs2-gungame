@@ -190,6 +190,8 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 **Meta rectora: paridad con el servidor CSGO original** — replicar en CS2 la configuración de gameplay, orden de armas, sonidos y ambiente del server viejo. Detalle y mapeos en `docs/CS2-GunGame-Paridad-CSGO.md`. **Requiere plan (Plan Mode) antes de ejecutar.**
 
+**Estado al 2026-09-16:** producción operativa y comunidad de Discord integrada (GGExtras 0.8.0: feed de ganadores, rankings histórico y mensual, roles Top, `/vincular`, páginas en `gks.goadatti.com`). Detalle y lo que falta probar en la memoria del proyecto (`pendientes-retoma`, `discord-servidor-gks`).
+
 **Estado al 2026-09-15:** el proyecto pasó de "server local de pruebas" a **producción**.
 Servidor contratado en **RDSNode** (Santiago, Ryzen 7 9700X), panel Pterodactyl,
 `45.236.90.224:26260`, hostname `🔪 || GKS - GunGame Killers - 1.6 Style ||`, público y listado
@@ -219,6 +221,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       el anuncio de prueba "Campeones de agosto 2026" en `#anuncios` y su fila en `ggextras_month_awards`. Después recargar GGExtras
       (subir de nuevo su DLL) para que `#ranking` se reescriba y los roles Top se ajusten. Mientras existan también salen en `!top`.
 - [ ] **Desactivar "Bot público"** de `GKS Bot` (Developer Portal → Bot). Discord no lo deja mientras exista enlace de instalación: primero Instalación → Enlace de instalación → Ninguno. Redirect OAuth y Client Secret ya configurados (2026-09-16).
+- [ ] **Probar en el juego**: aviso al entrar un top 3 del mes, `!vincular` con código y el anuncio de ganador en Discord con una partida real.
+- [ ] **`gg-extensions` sin repositorio remoto**: GGExtras, GGTrails y los emojis solo existen en el disco local.
 - [ ] Bajar `sv_hibernate_when_empty` a su valor real: quedó en 0 para pruebas.
 - [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
       de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
@@ -229,6 +233,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [ ] **Plugin de extensión GG** — `GGExtras` en `F:\git\gg-extensions\` (ya repo git, junto a GGTrails). Arrancó con el mensaje de bienvenida; faltan winner effects (volar al ganar), MVP del líder, `gg.intro`/`takenlead`/`lostlead`/`tiedlead`, sonido de inicio de ronda y los webhooks de Discord — vía GunGame API.
 - [ ] Advertisements periódicos en chat (redactar mensajes nuevos; el cfg viejo no se commiteó).
 - [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
+- [ ] **Darle valor al top 10 dentro del server** (nombre, personaje, efectos): investigar qué se puede sin romper las reglas de Valve.
+- [ ] Bajar `MinKillsPerLevel` de 3 a 2 (≈70 kills por partida en vez de 103), cuando el usuario lo confirme.
 - [ ] Evaluar extensiones extra (`docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord).
 
 ### Cerrado
