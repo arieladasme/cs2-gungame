@@ -3234,6 +3234,10 @@ namespace GunGame
                 Logger.LogError($"SoundPlayer: No sound value found for key '{soundKey}'. Cannot play sound.");
                 return;
             }
+            if (!soundData.Value.IsRandom && string.IsNullOrEmpty(soundData.Value.SoundValue))
+            {
+                return;
+            }
             if (Config.UseSoundEvents)
             {
                 if (string.IsNullOrEmpty(soundData.Value.SoundValue))
@@ -5100,7 +5104,6 @@ namespace GunGame
         [CommandHelper(whoCanExecute: CommandUsage.SERVER_ONLY)]
         public void OnRespawnDistance(CCSPlayerController? playerController, CommandInfo command)
         {
-            if (playerController == null || !playerController.IsValid) { return; }
             if (command.ArgCount < 2) { return; }
 
             if (double.TryParse(command.GetArg(1), out double distance))
@@ -5980,12 +5983,8 @@ namespace GunGame
             // Use the dictionary directly. There's no more Lazy initialization.
             if (_soundMap.TryGetValue(soundIdentifierKey, out string? soundValue))
             {
-                if (string.IsNullOrEmpty(soundValue))
-                {
-                    _plugin.Logger.LogWarning($"Warning: SoundMapper.GetSoundValue called with key '{soundIdentifierKey}' but no sound value is configured.");
-                    return null;
-                }
-                return new SoundInfo(soundValue, false);
+                // Empty in the config means "no sound" (MolotovKillSound ships empty), not an error.
+                return new SoundInfo(soundValue ?? "", false);
             }
             string soundFileToPlay = null!;
             List<string>? soundFileList = null!;
