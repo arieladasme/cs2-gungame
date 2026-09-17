@@ -82,7 +82,7 @@ Puntos clave:
 
 **Feature local mayor: modo TEAMPLAY (2026-07-16)** — `gg_teamplay` estilo CS 1.6 (AMXX): nivel y pozo de kills compartidos por equipo (meta = req individual × jugadores, mods cuchillo 0.33 / HE 0.50), robo acredita el req individual al pozo, victoria de EQUIPO real vía `TerminateRound`. Config `TeamPlay` 0/1/2 + comando `gg_teamplay` (override en memoria — `LoadConfig` no lo pisa). Región `#region Teamplay` en gg2.cs + branches `IsTeamplayActive`. Candidato a PR upstream.
 
-**Divergencias locales vs upstream v1.2.4 (tras merge 2026-07-16 — upstream ya trae net10/1.0.371/VelocityModifier):** (1) `ReloadActiveWeapon`: `SetStateChanged` a `m_iClip1` en vez de `m_pReserveAmmo` — revive `ReloadWeapon: true` (recarga al matar); (2) `StartTripleEffects`: timer 0.25s re-aplicando `VelocityModifier` mientras dura el bonus multi-nivel (el engine lo recupera a 1.0 solo — con una sola asignación el efecto no se percibe; upstream lo asigna una vez); (3) `AlltalkOnWin`: agrega `sv_alltalk` junto a `sv_full_alltalk`; (4) `ExecConfigFile`: los cfg del config folder se ejecutan leyendo sus líneas, no con `exec` (ver gotcha en §8 — con `exec` la votación de mapa nunca arrancaba). Candidatos a PR upstream. Al mergear upstream nuevo, verificar que sobrevivan (grep `m_iClip1`, `speedTimer`, `sv_alltalk`, `ExecConfigFile`).
+**Divergencias locales vs upstream v1.2.4 (tras merge 2026-07-16 — upstream ya trae net10/1.0.371/VelocityModifier):** (1) `ReloadActiveWeapon`: `SetStateChanged` a `m_iClip1` en vez de `m_pReserveAmmo` — revive `ReloadWeapon: true` (recarga al matar); (2) `StartTripleEffects`: timer 0.25s re-aplicando `VelocityModifier` mientras dura el bonus multi-nivel (el engine lo recupera a 1.0 solo — con una sola asignación el efecto no se percibe; upstream lo asigna una vez); (3) `AlltalkOnWin`: agrega `sv_alltalk` junto a `sv_full_alltalk`; (4) `ExecConfigFile`: los cfg del config folder se ejecutan leyendo sus líneas, no con `exec` (ver gotcha en §8 — con `exec` la votación de mapa nunca arrancaba); (5) `Respawn`: si `SkipSpawn` descarta el respawn (muerte dentro de los 0.8 s anti doble spawn), reintenta 1 s después — sin esto el jugador queda muerto hasta fin de ronda; (6) `BlockWeaponSwitchIfKnife` implementado: tras subir con cuchillo, `slot3` al frame siguiente; (7) `EventRoundStartHandler` borra `game_player_equip` en cada ronda (mapas que regalan armas al empezar); (8) niveles de granada y taser: selección del arma desde el server (`slot4` / `use weapon_taser`) — el `slot4` enviado al cliente lo ignoran los bots; (9) `OnMapStart` limpia `teamplayOverride`: `gg_teamplay` vale solo para la partida en curso. Candidatos a PR upstream. Al mergear upstream nuevo, verificar que sobrevivan (grep `m_iClip1`, `speedTimer`, `sv_alltalk`, `ExecConfigFile`, `SkipSpawn`, `BlockWeaponSwitchIfKnife`, `game_player_equip`, `ExecuteClientCommandFromServer`, `teamplayOverride = null`).
 
 **Gotcha mayor (2026-09-11): Metamod más nuevo NO es mejor.** El 2026-09-08 Metamod bumpeó la
 SourceHook API a **018** (commit "Bump MMS Api version, and min load version", desde el snapshot
@@ -182,6 +182,13 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
   Fix local: `OnMapStart` lo devuelve a 0 desde el plugin.
 - `bot_difficulty` en `server.cfg` **no basta**: ese archivo solo corre al arrancar el server y el
   gamemode repone la dificultad en cada mapa. Va también en `gamemode_casual_server.cfg`.
+- **Recargar GG2 en caliente deja a GGExtras con la API vieja** (2026-09-17): toma `gungame:api` solo en
+  `OnAllPluginsLoaded`. Tras subir `GG2.dll`, re-subir también `GGExtras.dll` y confirmar
+  `Subscribed to gungame:api` en el log. Subir GG2 reinicia la partida: solo con el server vacío.
+- **GG1MapChooser v1.8.0 traba la votación si el mapa cambia con una abierta** (2026-09-17): `OnMapEnd` no
+  limpia `voteTimer`, y desde ahí cada `ggmc_mapvote_start` loguea `Vote Timer already works` y el mapa
+  siguiente sale al azar. No reiniciar ni cambiar el mapa por RCON en los 25 s posteriores a una votación.
+  Se destraba re-subiendo la misma `GG1MapChooser.dll`.
 - Commits: Conventional Commits en español (`feat:`, `fix:`), cuerpo en imperativo es-MX explicando el porqué si no es evidente.
 
 ---
@@ -190,7 +197,7 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
 
 **Meta rectora: paridad con el servidor CSGO original** — replicar en CS2 la configuración de gameplay, orden de armas, sonidos y ambiente del server viejo. Detalle y mapeos en `docs/CS2-GunGame-Paridad-CSGO.md`. **Requiere plan (Plan Mode) antes de ejecutar.**
 
-**Estado al 2026-09-16:** producción operativa y comunidad de Discord integrada (GGExtras 0.8.0: feed de ganadores, rankings histórico y mensual, roles Top, `/vincular`, páginas en `gks.goadatti.com`). Detalle y lo que falta probar en la memoria del proyecto (`pendientes-retoma`, `discord-servidor-gks`).
+**Estado al 2026-09-16:** producción operativa y comunidad de Discord integrada (GGExtras 0.9.0: feed de ganadores, rankings histórico y mensual, roles Top, `/vincular`, `ggx_maps` para cs2-watch, páginas en `gks.goadatti.com`). Detalle y lo que falta probar en la memoria del proyecto (`pendientes-retoma`, `discord-servidor-gks`).
 
 **Estado al 2026-09-15:** el proyecto pasó de "server local de pruebas" a **producción**.
 Servidor contratado en **RDSNode** (Santiago, Ryzen 7 9700X), panel Pterodactyl,
@@ -210,11 +217,57 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 ### Higiene del entorno
 
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
-      en el transcript de la sesión del 2026-09-15.
+      en el transcript de la sesión del 2026-09-15; la password RCON, parcialmente, en la del 2026-09-16.
+- [ ] **Pool de mapas**: medir spawns de los 5 mapas previos sin medir (`ar_pool_day`, `ar_shoots`,
+      `ar_baggage`, `aim_map`, `fy_iceworld`) con `tools/maptest.py`; revisar en persona `fy_simpsons`
+      (muertes por `trigger_hurt`); borrar del disco del server la descarga huérfana `3461824328`
+      (segundo addon viejo de MultiAddonManager) si ya no se usa. Opcional: entrar a `yaksart_qishloq`
+      3772103497 y `aim_dota_mid_d` 3307132429, descartados porque no entran bots.
 - [x] ~~Reponer los 3 mapas Workshop al pool~~ (2026-09-15): `GGMCmaps.json` quedó con 6 mapas —
       3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map` 3070549948.
       Aplicado en caliente con RCON `reloadmaps` (comando de GG1MapChooser, releé el archivo sin
       reiniciar el server ni cortar la partida en curso).
+- [x] **Pool ampliado a 21 mapas** (2026-09-16/17): +15 mapas Workshop en dos tandas, probados uno por uno en producción
+      con bots (cargan en 5-31 s, sin recargas ni errores de spawn). **Regla del pool: un mapa necesita
+      spawns para los slots del server** — CS2 no deja entrar a un equipo más jugadores que spawns tiene
+      (`***** Read N ct spawn, M t spawn` en el log de GG2, al arrancar la primera ronda con jugadores).
+      Capacidad (2 × spawns por equipo); **al subir los slots, descartar los que queden por debajo**:
+
+      | Mapa | Workshop | Spawns CT/T | Jugadores máx. |
+      |---|---|---|---|
+      | `1v1aim_map_longdustversion_d` | 3082605693 | 9/9 | 18 |
+      | `aim_redline_cs2` | 3070262995 | 10/10 | 20 |
+      | `fy_simpsons` | 3378012955 | 12/12 | 24 |
+      | `gg_ctm_cs2` | 3581521460 | 12/12 | 24 |
+      | `aim_deagle` | 3075996446 | 14/14 | 28 |
+      | `awp_india` | 3070290869 | 16/16 | 32 |
+      | `2000_classics` | 3076234827 | 16/16 | 32 |
+      | `fy_snow_legacy` | 3592238209 | 16/16 | 32 |
+      | `awp_bungalow_rz` | 3749777262 | 16/16 | 32 |
+      | `gg_mini_dust` | 3361055721 | 16/16 | 32 |
+      | `de_vc2_inferno_gg1` | 3329658347 | 16/16 | 32 |
+      | `aim_map_s2r` | 3070260370 | 18/18 | 36 |
+      | `gg_lotus_extended` | 3378140417 | 24/24 | 48 |
+      | `gg_sex_fix_cmg` | 3406515004 | 30/30 | 60 |
+      | `fy_buzzkill523` | 3277118494 | 32/32 | 64 |
+      | `gg_fy_back_street_cs2` | 3429238349 | 32/32 | 64 |
+
+      Descartados: `aim_awp` 3444237717 (5/5), `awp_duel` 3608811044 (3/3), `aim_pistol_cs2` 3778249348 (1/1),
+      `am_westwood_wf` 3386236697 (1/1), `yaksart_qishloq` 3772103497 y `aim_dota_mid_d` 3307132429 (no entra
+      ningún bot, así que tampoco se pudieron medir los spawns) y `Desert (CS:GO)` 256816355 (ítem legacy de
+      CS:GO, solo trae `_legacy.bin`). Pool: **21 mapas** tras la segunda tanda (2026-09-17). De los 6 mapas previos del pool, solo `fy_snow_legacy` está medido.
+      Con `-maxplayers 16` los bots se quedan en **15** incluso en mapas con spawns de sobra: el tope es del
+      server, no del mapa. En `fy_simpsons` hubo 6 muertes por `trigger_hurt` (4 en los primeros 10 s) —
+      revisar en persona si hay spawns dentro de una zona de daño.
+      **La clave del JSON es el nombre interno del mapa, no el título del Workshop** (`$2000$` →
+      `2000_classics`): sale del `.vpk` interno (`maps/<nombre>.vpk`), bajando el ítem con
+      `steamcmd +workshop_download_item 730 <id>`. `WorkshopMapProblemCheck` no protege nada en v1.8.0
+      (`ResetData` vacía `MapToChange` antes del chequeo), pero el nombre sí lo usan `RememberPlayedMaps`,
+      el display y el webhook de Discord. Las descargas del server viven en
+      `game/bin/linuxsteamrt64/steamapps/workshop/content/730/<id>`: borrarlas al sacar un mapa del pool.
+      Receta para una tanda nueva: API `ISteamRemoteStorage/GetPublishedFileDetails` (visibilidad y peso,
+      sin API key) → `steamcmd` para el nombre interno → `tools/maptest.py id:nombre ...` → agregar al
+      JSON solo los que pasan → `reloadmaps`.
 - [ ] **Borrar los datos de prueba del ranking** (cargados 2026-09-16), después de probar `!discord` en el juego:
       `DELETE FROM gungame_playerdata WHERE authid LIKE 'TEST\_%'`, `DELETE FROM ggextras_player_stats WHERE authid LIKE 'TEST\_%'`,
       las 7 victorias ficticias de waha (`DELETE FROM ggextras_player_stats WHERE authid = '76561198001397523' AND month = '2026-09'`),
@@ -236,6 +289,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [ ] **Darle valor al top 10 dentro del server** (nombre, personaje, efectos): investigar qué se puede sin romper las reglas de Valve.
 - [ ] Bajar `MinKillsPerLevel` de 3 a 2 (≈70 kills por partida en vez de 103), cuando el usuario lo confirme.
 - [ ] Evaluar extensiones extra (`docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord).
+- [ ] **Crear el mapa `gks_2rooms`** en Hammer: réplica del 2_rooms de 1.6 (el usuario hizo la versión CSGO `2_rooms_w`, 449416365; no hay port a CS2). Dos cuartos de 1024×1024, techo 256, pared divisoria de 64 con puerta de 192 del piso al techo. 16 spawns por equipo, `light_omni2` + `env_combined_light_probe_volume` (sin él los jugadores se ven negros), lightmap 1024 para que pese pocos MB. Subir al Workshop como **"No listado"**, nunca "Oculto" (ver loop en §4), y versionar el `.vmap` fuera de la carpeta de Steam.
 
 ### Cerrado
 
@@ -253,7 +307,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [x] **GGExtras — bienvenida** (2026-09-15): center HTML + chat al conectar, textos en config JSON. CS2 **no tiene** el MOTD HTML de CSGO (Source 2 no porta el panel VGUI; `find html` en el server no devuelve ni un cvar). Repo `gg-extensions` versionado en el mismo paso
 - [x] **GGTrails** (2026-07-16): estelas de colores en granadas — plugin propio, desplegado
 - [x] **Modo TEAMPLAY** (2026-07-16): nivel y pozo de kills por equipo estilo CS 1.6 — ver §4
-- [x] **cs2-watch** (2026-07-17, validado contra producción 2026-09-15): panel admin web estilo HLSW — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros, sin dependencia de CSS. Verificado con humano real conectado: scoreboard con SteamID y ping, kill feed, chat y `say`, quick commands. Corre local + túnel cloudflared porque Pterodactyl no lo aloja; el `ingest_url` del túnel es efímero y hay que re-registrarlo cada vez. Pendiente aparte: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
+- [x] **cs2-watch** (2026-07-17, validado contra producción 2026-09-15): panel admin web estilo HLSW — repo público `github.com/arieladasme/cs2-watch` (fuente en `F:\git\cs2-watch`). Protocolos Valve puros, sin dependencia de CSS. Verificado con humano real conectado: scoreboard con SteamID y ping, kill feed, chat y `say`, quick commands. Corre local + túnel cloudflared porque Pterodactyl no lo aloja. **Se levanta con doble clic en `start.cmd`** (2026-09-16): abre el túnel, reescribe el `ingest_url` efímero y borra del server la URL anterior. La lista de mapas sale en vivo del server con `maps_command: "ggx_maps"` (comando de GGExtras 0.9.0 que lee `GGMCmaps.json`). Pendiente aparte: cuentas de donación (manuales en `docs/Manual-Donaciones-*.md`)
 - [x] **Stack al día** (2026-09-11): CS2 25218825 + Metamod git1411 + CSS 1.0.374 + MultiAddonManager v1.5.4 + QuakeSounds 26.08.1; GG2 y GGTrails recompilados. Verificado por RCON y log. Ver §4 y `docs/Bitacora-2026-09-11.md`
 
 ---
