@@ -20,7 +20,7 @@
   "levels.behind": "Vas {green}{0}{default} niveles detrás del líder",
   "tiedwith.leader": "{green}{0}{default} empató con el líder en el nivel {1}",
   "winner.is": "El ganador es {0}",
-  "looser.is": "{0} fue acuchillado",
+  "looser.is": "{0} fue fileteado",
   "dontshoot.knife": "¡No se permite {lightred}disparar y acuchillar{default} en este servidor!",
   "triedshoot.knife": "¡{0} intentó {lightred}disparar y acuchillar{default} y perdió un nivel!",
   "kill.afk": "¡No ganas la baja porque mataste a un AFK!",
