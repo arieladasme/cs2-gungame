@@ -310,6 +310,15 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 ### Cerrado
 
+- [x] **GGExtras 0.13.0** (2026-09-17): **sonidos de líder e intro** (`gg.takenlead`/`lostlead`/`tiedlead`/`gg.intro`, los
+      MP3 del server de CS:GO que ya venían en el addon 3766168370 sin que nadie los usara; se calculan con
+      `LevelChangeEvent` un frame después, porque GG2 lo dispara antes de aplicar el nivel, y respetan `!music` leyendo
+      `gungame_playerdata.sound` al conectar). **Estela** de color para el top 3 del mes (mismos beams que GGTrails).
+      **Mensajes periódicos** cada 3 min (`ChatAds`, solo con humanos conectados). **Logros** en `ggextras_achievements`:
+      Primera victoria, Ladrón (5 robos en una partida), Cabezazo (30 headshots en una partida), Carnicero (100 fileteos)
+      y Leyenda (25 victorias); se anuncian en el chat y en `#general`, `!logros` los lista y al cargar el plugin los
+      históricos ya cumplidos se otorgan en silencio. **Falta verlo en el juego** (sonidos, estela y un logro real).
+
 - [x] **Show del ganador — GGExtras 0.12.0** (2026-09-17): durante `EndGameDelay` el ganador brilla (props `prop_dynamic` con
       glow que siguen al pawn), levita con `Teleport` por pasos y a cada humano vivo se le gira la mira hacia él una vez.
       Perillas en `GGExtras.json` (`WinnerGlowColor`, `WinnerLevitateHeight`, `WinnerLevitateSeconds`, `WinnerAimEveryone`)
