@@ -268,11 +268,11 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       Receta para una tanda nueva: API `ISteamRemoteStorage/GetPublishedFileDetails` (visibilidad y peso,
       sin API key) → `steamcmd` para el nombre interno → `tools/maptest.py id:nombre ...` → agregar al
       JSON solo los que pasan → `reloadmaps`.
-- [ ] **Borrar los datos de prueba del ranking** (cargados 2026-09-16), después de probar `!discord` en el juego:
-      `DELETE FROM gungame_playerdata WHERE authid LIKE 'TEST\_%'`, `DELETE FROM ggextras_player_stats WHERE authid LIKE 'TEST\_%'`,
-      las 7 victorias ficticias de waha (`DELETE FROM ggextras_player_stats WHERE authid = '76561198001397523' AND month = '2026-09'`),
-      el anuncio de prueba "Campeones de agosto 2026" en `#anuncios` y su fila en `ggextras_month_awards`. Después recargar GGExtras
-      (subir de nuevo su DLL) para que `#ranking` se reescriba y los roles Top se ajusten. Mientras existan también salen en `!top`.
+- [x] ~~Borrar los datos de prueba del ranking~~ (2026-09-17): `TEST_xx`, las 7 victorias falsas de waha (restadas, no
+      borradas: la fila ya tenía 1 victoria y 11 cuchilladas reales), el anuncio de agosto y su fila en `ggextras_month_awards`.
+      El mensaje del mes de `#ranking` había desaparecido (404 al editar, sin rastro en el audit log): se recreó y
+      `DiscordMonthlyMessageId` quedó en `1550149660189139116`. **Si un mensaje fijo de `#ranking` da 404, GGExtras
+      no llega a sincronizar los roles Top** (la edición falla antes).
 - [ ] **Desactivar "Bot público"** de `GKS Bot` (Developer Portal → Bot). Discord no lo deja mientras exista enlace de instalación: primero Instalación → Enlace de instalación → Ninguno. Redirect OAuth y Client Secret ya configurados (2026-09-16).
 - [ ] **Probar en el juego**: aviso al entrar un top 3 del mes, `!vincular` con código y el anuncio de ganador en Discord con una partida real.
 - [ ] **`gg-extensions` sin repositorio remoto**: GGExtras, GGTrails y los emojis solo existen en el disco local.
