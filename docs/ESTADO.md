@@ -25,7 +25,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 ## Higiene del entorno
 
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
-      en el transcript de la sesión del 2026-09-15; la password RCON, parcialmente, en la del 2026-09-16.
+      en el transcript de la sesión del 2026-09-15; la password RCON, parcialmente, en la del 2026-09-16. El **token del bot de Discord** quedó entero en el de la sesión del 2026-09-17,
+      al leer el `GGExtras.json` del server: rotarlo primero (Portal → Bot → Restablecer token) y reponerlo en ese JSON.
 - [ ] **Pool de mapas**: revisar en persona `fy_simpsons` (muertes por `trigger_hurt`). **`3461824328` NO es huérfano** (2026-09-17): es el addon de QuakeSounds de Kandru,
       montado por `mm_extra_addons`, del que salen los 12 sonidos `QuakeSoundsD.*`; no borrarlo. Opcional: entrar a `yaksart_qishloq`
       3772103497 y `aim_dota_mid_d` 3307132429, descartados porque no entran bots.
