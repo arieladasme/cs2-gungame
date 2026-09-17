@@ -201,8 +201,8 @@ namespace GunGame
         public PlayerManager playerManager;
         public Dictionary<ulong, int> PlayerLevelsBeforeDisconnect = new();
         public Dictionary<ulong, int> PlayerHandicapTimes = new();
-        // Runtime override set by the gg_teamplay command. Kept outside Config because
-        // RestartGame() -> LoadConfig() re-reads the json from disk and would wipe it.
+        // Runtime override set by the gg_teamplay command, cleared on map start. Kept outside Config
+        // because RestartGame() -> LoadConfig() re-reads the json from disk and would wipe it.
         private int? teamplayOverride = null;
         private bool IsTeamplayActive => GGVariables.Instance.TeamplayActive;
         public List<int> SkipSpawn = new();
@@ -905,6 +905,8 @@ namespace GunGame
         }
         private void OnMapStart(string name)
         {
+            // gg_teamplay applies to the current match only; the next map goes back to Config.TeamPlay.
+            teamplayOverride = null;
             // EndMultiplayerGameNormal drops mp_winlimit to 1 so the round that closes the match
             // shows a team victory instead of a cancelled match, and nothing puts it back: CS2
             // rejects the cvar from a gamemode cfg (DISALLOWED WORKSHOP CONVAR), so it can only be
@@ -2321,6 +2323,11 @@ namespace GunGame
             {
                 return HookResult.Continue;
             }
+            // Maps re-create game_player_equip every round (warmup included) and it equips after our spawn weapons, e.g. an AK on first spawn.
+            foreach (var equip in Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("game_player_equip"))
+            {
+                equip.Remove();
+            }
             if (GGVariables.Instance.Round == 1)
             {
                 var points = Utilities.FindAllEntitiesByDesignerName<CCSTeam>("point_servercommand");
@@ -2400,7 +2407,6 @@ namespace GunGame
                             Config.WarmupEnabled = false;
                             GGVariables.Instance.DisableWarmupOnRoundEnd = false;
                         } */
-            //            RemoveEntityByClassName("game_player_equip");
             GGVariables.Instance.RoundStarted = true;
             return HookResult.Continue;
         }
@@ -2902,9 +2908,23 @@ namespace GunGame
                 }
             }
 
-            if (levelWeapon.Slot == 4)  // grenades slot
+            if (levelupWithKnife && Config.BlockWeaponSwitchIfKnife && !dropKnife && !playerController.IsBot)
             {
-                player.UseWeapon(4);
+                // GiveNamedItem deploys the new weapon; re-select the knife a frame later so knife chains aren't cut.
+                Server.NextFrame(() =>
+                {
+                    if (playerController.IsValid) playerController.ExecuteClientCommandFromServer("slot3");
+                });
+            }
+            else if (levelWeapon.Slot == 4 || levelWeapon.LevelIndex == SpecialWeapon.TaserLevelIndex)
+            {
+                // Nades and the taser don't auto-deploy over the knife, and a "slot" command sent to the client is ignored
+                // by bots, so select from the server. The taser shares slot 3 with the knife, hence "use".
+                string select = levelWeapon.Slot == 4 ? "slot4" : "use " + levelWeapon.FullName;
+                Server.NextFrame(() =>
+                {
+                    if (playerController.IsValid) playerController.ExecuteClientCommandFromServer(select);
+                });
             }
 
             /*            if (blockSwitch) {
@@ -4396,7 +4416,7 @@ namespace GunGame
             int goal = TeamplayKillsGoal(ts);
             if (ts.KillPool >= goal)
             {
-                TeamplayLevelUp(ts, Killer, VictimController);
+                TeamplayLevelUp(ts, Killer, VictimController, usedWeaponInfo.LevelIndex == SpecialWeapon.KnifeLevelIndex);
             }
             else
             {
@@ -4427,7 +4447,7 @@ namespace GunGame
                 }
             }
         }
-        private void TeamplayLevelUp(TeamState ts, GGPlayer scorer, CCSPlayerController victimPc)
+        private void TeamplayLevelUp(TeamState ts, GGPlayer scorer, CCSPlayerController victimPc, bool withKnife)
         {
             ts.KillPool = 0; // no carry-over, like AMXX
             int newLevel = ts.Level + 1;
@@ -4459,7 +4479,7 @@ namespace GunGame
                     if (pc.Pawn != null && pc.Pawn.Value != null
                         && pc.Pawn.Value.LifeState == (byte)LifeState_t.LIFE_ALIVE)
                     {
-                        GiveNextWeapon(pl.Slot); // TurboMode-style: new weapon right away
+                        GiveNextWeapon(pl.Slot, withKnife && pl.Slot == scorer.Slot); // TurboMode-style: new weapon right away
                     }
                 }
             }
@@ -5168,6 +5188,12 @@ namespace GunGame
                     if (SkipSpawn.Contains(pl.Slot))
                     {
                         Logger.LogWarning($"Skip Respawn for {pl.PlayerName} ({pl.Slot})");
+                        // Killed inside the anti-double-spawn window (spawn kill): without a retry the player stays dead until round end.
+                        AddTimer(1.0f, () =>
+                        {
+                            if (IsValidPlayer(pl) && !TryGetAlivePlayerPawn(pl, out _))
+                                Respawn(pl, spawnpoint);
+                        }, TimerFlags.STOP_ON_MAPCHANGE);
                         return;
                     }
                     bool requiredRespawn = false;
