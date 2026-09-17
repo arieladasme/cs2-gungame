@@ -182,9 +182,13 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
   Fix local: `OnMapStart` lo devuelve a 0 desde el plugin.
 - `bot_difficulty` en `server.cfg` **no basta**: ese archivo solo corre al arrancar el server y el
   gamemode repone la dificultad en cada mapa. Va también en `gamemode_casual_server.cfg`.
-- **Recargar GG2 en caliente deja a GGExtras con la API vieja** (2026-09-17): toma `gungame:api` solo en
-  `OnAllPluginsLoaded`. Tras subir `GG2.dll`, re-subir también `GGExtras.dll` y confirmar
-  `Subscribed to gungame:api` en el log. Subir GG2 reinicia la partida: solo con el server vacío.
+- **Recargar GG2 en caliente deja a los plugins de extensión con la API muerta** (2026-09-17, corregido):
+  CSS nunca borra el proveedor de una capability al descargar un plugin, y `PluginCapability.Get()` devuelve
+  **el primero** registrado, o sea el GG2 del arranque. `Subscribed to gungame:api` sale igual, pero los eventos
+  no llegan nunca: entre el 17-09 03:41 UTC y el arreglo no hubo feed de ganadores ni stats del mes.
+  GGExtras ≥ 0.11.1 toma el **último** proveedor por reflexión; con eso basta re-subir `GGExtras.dll` tras
+  subir `GG2.dll`. Cualquier otro plugin que use `Get()` necesita reiniciar el server. Subir GG2 reinicia la
+  partida: solo con el server vacío.
 - **GG1MapChooser v1.8.0 traba la votación si el mapa cambia con una abierta** (2026-09-17): `OnMapEnd` no
   limpia `voteTimer`, y desde ahí cada `ggmc_mapvote_start` loguea `Vote Timer already works` y el mapa
   siguiente sale al azar. No reiniciar ni cambiar el mapa por RCON en los 25 s posteriores a una votación.
@@ -298,6 +302,13 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [ ] **Crear el mapa `gks_2rooms`** en Hammer: réplica del 2_rooms de 1.6 (el usuario hizo la versión CSGO `2_rooms_w`, 449416365; no hay port a CS2). Dos cuartos de 1024×1024, techo 256, pared divisoria de 64 con puerta de 192 del piso al techo. 16 spawns por equipo, `light_omni2` + `env_combined_light_probe_volume` (sin él los jugadores se ven negros), lightmap 1024 para que pese pocos MB. Subir al Workshop como **"No listado"**, nunca "Oculto" (ver loop en §4), y versionar el `.vmap` fuera de la carpeta de Steam.
 
 ### Cerrado
+
+- [x] **Tanda B de mejoras — GGExtras 0.11.0** (2026-09-17): tag `[TOP N]` en el scoreboard para los top 3 del mes
+      (`ScoreboardTopTag`; solo borra tags que puso él, no el del grupo de Steam); tabla `ggextras_matches` con cada
+      partida ganada (mapa, inicio, duración, ganador, humanos y bots; el inicio es la primera kill fuera del warmup
+      porque GG2 nunca dispara `RestartEvent`; sin columna teamplay porque la API no lo expone); y roles permanentes
+      por logro (`DiscordMilestoneRoles`: Veterano ≥ 10 victorias, Filetero ≥ 50 fileteos, históricos), registrados
+      en `ggextras_milestone_roles`. Roles y registro de partidas probados en producción (0.11.1); **falta ver el tag en el juego**. Para probar con bots en producción, poner `sv_password` mientras dura la prueba: a los 70 s entró un jugador real a una partida de 5 niveles.
 
 - [x] **Tanda A de mejoras** (2026-09-17), solo config en el server:
       logo en la bienvenida (`<img>` en `CenterHtml` de `GGExtras.json`, archivo en el repo `gks`);
