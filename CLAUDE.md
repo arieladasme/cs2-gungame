@@ -277,6 +277,12 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [ ] **Probar en el juego**: aviso al entrar un top 3 del mes, `!vincular` con código y el anuncio de ganador en Discord con una partida real.
 - [ ] **`gg-extensions` sin repositorio remoto**: GGExtras, GGTrails y los emojis solo existen en el disco local.
 - [ ] Bajar `sv_hibernate_when_empty` a su valor real: quedó en 0 para pruebas.
+- [ ] **Corregir la hora de las tareas de teamplay** cuando cambie el horario. El panel corre en hora de Europa
+      (UTC+2 hoy) y Chile en UTC-3, y el cron no maneja zonas horarias. El 2026-10-25 (Europa pasa a UTC+1)
+      restar 1 a la hora de las 3 tareas (16→15, 22→21, 2→1); el 2027-03-28 volver a sumarla, y el
+      2027-04-04 (Chile pasa a UTC-4) sumar 1 más. Verificar con `next_run_at` de la API.
+- [ ] **Ver en el juego el logo de la bienvenida** (`!welcome`): la imagen de `gks.goadatti.com` dentro de
+      `CenterHtml` no se ha probado en un cliente.
 - [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
       de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
       confirmar que la nueva pase.
@@ -292,6 +298,15 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [ ] **Crear el mapa `gks_2rooms`** en Hammer: réplica del 2_rooms de 1.6 (el usuario hizo la versión CSGO `2_rooms_w`, 449416365; no hay port a CS2). Dos cuartos de 1024×1024, techo 256, pared divisoria de 64 con puerta de 192 del piso al techo. 16 spawns por equipo, `light_omni2` + `env_combined_light_probe_volume` (sin él los jugadores se ven negros), lightmap 1024 para que pese pocos MB. Subir al Workshop como **"No listado"**, nunca "Oculto" (ver loop en §4), y versionar el `.vmap` fuera de la carpeta de Steam.
 
 ### Cerrado
+
+- [x] **Tanda A de mejoras** (2026-09-17), solo config en el server:
+      logo en la bienvenida (`<img>` en `CenterHtml` de `GGExtras.json`, archivo en el repo `gks`);
+      lista para pocos jugadores en `GG1MapChooser.json` (`LowPlayerMaxPlayers: 3`, los 17 mapas del pool sin
+      los 4 grandes: `gg_lotus_extended`, `gg_sex_fix_cmg`, `fy_buzzkill523`, `gg_fy_back_street_cs2`; al agregar
+      mapas al pool, sumarlos también ahí); y **teamplay los sábados y domingos a las 12, 18 y 22 h** con tres
+      tareas programadas del panel (aviso a los 5 y 1 min, luego `gg_teamplay 1`). No usa carpeta de config
+      aparte: `gg_teamplay` vale solo para la partida en curso y el cambio de mapa vuelve al modo normal. Si el
+      server está vacío a esa hora, el teamplay queda armado hasta que se juegue esa partida.
 
 - [x] **Discord de la comunidad** (2026-09-16): `GKS - GunGame Killers`, invitación `discord.gg/GYc5g36c2p`. Configurado por API con `GKS Bot`: canales, rol Moderador, Comunidad, AutoMod y bienvenida con reglas e IP. GG1MapChooser postea el mapa en juego en `#estado-servidor` (`DiscordSettings`). `#reglas` con reglas y la config del GunGame. GGExtras 0.3.0 anuncia a los ganadores humanos en `#ganadores` y `#general`, y mantiene en `#ranking` dos mensajes editados en el lugar: histórico (ganadores y acuchilladores) y del mes. GGExtras 0.6.0 además: anuncia en `#anuncios` a los campeones del mes que cerró, vincula Steam↔Discord desde Discord: `/vincular` da un código efímero y se confirma en el juego con `!vincular` (cliente gateway propio sobre `ClientWebSocket`, sin Discord.Net), o sin entrar al juego autorizando con Discord: GGExtras 0.8.0 lee la conexión de Steam verificada del perfil (verificado de punta a punta el 2026-09-16: vínculo guardado y rol Top 1 asignado) (OAuth2 `connections`; retorno en la página estática `gks.goadatti.com/vincular/`, proyecto Vercel `gks` desplegado desde el repo privado `arieladasme/gks`, que también sirve de link para compartir el Discord con vista previa propia; DNS en Squarespace con CNAME `gks` → `c38879186b62d668.vercel-dns-017.com`) y da los roles Top 1/2/3/10 al top 10 del mes, y avisa en el chat cuando entra un top 3. Tablas propias: `ggextras_player_stats`, `ggextras_discord_links`, `ggextras_link_codes`, `ggextras_month_awards` (lee MySQL con las credenciales de `gungame-db.json`; webhooks solo en el `GGExtras.json` del server)
 - [x] **Servidor de producción** (2026-09-15): RDSNode Santiago, `45.236.90.224:26260`, público y listado. Stack completo, stats en MySQL, sonidos custom, 7 ms de latencia
