@@ -127,6 +127,21 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 
 ## Cerrado
 
+- [x] **Las victorias contra bots ya suman** (2026-09-17, GGExtras 0.17.1): con el server poblado de bots
+      y `DontAddWinsOnBot: true`, ningún humano sumaba nunca (Raili ganó dos veces y no quedó registro).
+      Ahora la columna `bot_wins` de `ggextras_player_stats` las cuenta, el board del mes muestra el total
+      sumado y **al anunciar los campeones del mes cerrado se leen solo las victorias contra humanos y
+      `bot_wins` se pone en 0**. El histórico (`gungame_playerdata.wins`, que escribe GG2) y los logros
+      siguen siendo contra humanos: `DontAddWinsOnBot` no se tocó. Efectos, animación y sonidos de victoria
+      ya corrían para las victorias contra bots. **Falta verlo en una partida real**: que un win con la
+      última kill sobre bot incremente `bot_wins` y no `wins`.
+- [x] **El ranking de Discord se recupera solo** (2026-09-17, GGExtras 0.17.1): si alguien borra el mensaje
+      del ranking, el `PATCH` daba 404 y el ranking quedaba muerto hasta editar la config a mano. Ahora
+      un 404 con `code 10008` publica un mensaje nuevo y guarda su id en `GGExtras.json`; un 10015
+      (webhook malo) solo avisa.
+- [x] **Ruido de logs** (2026-09-17): una clave de sonido desconocida sale como `[WARN]` en vez de `[EROR]`
+      (GG2), y un mapa fuera del pool ya no se loguea como `[EROR] Can't find ... in Maps_from_List`
+      (parche local de GG1MapChooser, ver `CLAUDE.md` §8). `aim_map_d` sigue **fuera** del pool a propósito.
 - [x] **Sonido doble al robar con cuchillo** (2026-09-17): `LevelStealUpSound` y `KnifeStealSoundEvent`
       apuntaban los dos a `gg.levelsteal`. Quedó `gg.levelup` para el que sube y `gg.levelsteal` como
       anuncio a todo el server (también para el molotov, que era mudo). Qué dispara cada uno, en

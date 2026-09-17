@@ -3231,7 +3231,7 @@ namespace GunGame
 
             if (soundData == null || !soundData.HasValue)
             {
-                Logger.LogError($"SoundPlayer: No sound value found for key '{soundKey}'. Cannot play sound.");
+                Logger.LogWarning($"SoundPlayer: No sound value found for key '{soundKey}'. Cannot play sound.");
                 return;
             }
             if (!soundData.Value.IsRandom && string.IsNullOrEmpty(soundData.Value.SoundValue))
