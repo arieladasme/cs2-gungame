@@ -99,8 +99,13 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       (UTC+2 hoy) y Chile en UTC-3, y el cron no maneja zonas horarias. El 2026-10-25 (Europa pasa a UTC+1)
       restar 1 a la hora de las 3 tareas (16→15, 22→21, 2→1); el 2027-03-28 volver a sumarla, y el
       2027-04-04 (Chile pasa a UTC-4) sumar 1 más. Verificar con `next_run_at` de la API.
-- [ ] **Ver en el juego el logo de la bienvenida** (`!welcome`): la imagen de `gks.goadatti.com` dentro de
-      `CenterHtml` no se ha probado en un cliente.
+- [x] ~~Ver en el juego el logo de la bienvenida~~ (2026-09-17, GGExtras 0.17.1): se ve, y ahora sale
+      **al arrancar la partida** junto al "Play!" y al spam de "GunGame match starting!", no al conectar
+      (ahí caía en la pantalla de carga). Lo dispara `ggx_welcome` desde `gungame.warmupend.cfg`, armado
+      para `round_freeze_end`. Ajuste elegido: refresco **0,1 s**, duración **2 s**. Dos hallazgos por el
+      camino, en [[hud-central-cs2-no-sostiene-imagen]]: el HUD pide la imagen por red en cada dibujo
+      (arreglado con `vercel.json` que la cachea un año en el repo `gks`) y no sostiene una imagen fija
+      más de ~2 s. `ggx_welcome now` la muestra al instante para probar.
 - [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
       de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
       confirmar que la nueva pase.
@@ -121,6 +126,20 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 - [ ] **Crear el mapa `gks_2rooms`** en Hammer: réplica del 2_rooms de 1.6 (el usuario hizo la versión CSGO `2_rooms_w`, 449416365; no hay port a CS2). Dos cuartos de 1024×1024, techo 256, pared divisoria de 64 con puerta de 192 del piso al techo. 16 spawns por equipo, `light_omni2` + `env_combined_light_probe_volume` (sin él los jugadores se ven negros), lightmap 1024 para que pese pocos MB. Subir al Workshop como **"No listado"**, nunca "Oculto" (ver loop en CLAUDE.md §4), y versionar el `.vmap` fuera de la carpeta de Steam.
 
 ## Cerrado
+
+- [x] **Sonido doble al robar con cuchillo** (2026-09-17): `LevelStealUpSound` y `KnifeStealSoundEvent`
+      apuntaban los dos a `gg.levelsteal`. Quedó `gg.levelup` para el que sube y `gg.levelsteal` como
+      anuncio a todo el server (también para el molotov, que era mudo). Qué dispara cada uno, en
+      [[sonidos-robo-cuchillo-gg2]]: el global solo suena si la víctima **baja** de nivel, así que
+      acuchillar a alguien de nivel 1 no lo dispara.
+- [x] **QuakeSounds ya no suena en el warmup** (2026-09-17): `enabled_during_warmup: false`. El "Play!"
+      de `round_freeze_end` sonaba también al calentar. Silencia todos sus anuncios en warmup, no solo ese.
+- [x] **Los dos links del Discord en el juego** (2026-09-17, GGExtras 0.15.0): `discord.gg/GYc5g36c2p`
+      primero (es el que la gente reconoce) y `gks.goadatti.com` como alternativa tipeable, en la
+      bienvenida, en `!discord` y en los mensajes periódicos. La línea del Discord sale **6 veces** al
+      conectar (`ChatLines` repetida en el JSON del server, sin código).
+- [x] **Canales de Discord renombrados** (2026-09-17): `emoji┃nombre` y categorías `╰┈➤ NOMBRE`. En
+      canales de texto Discord no admite mayúsculas ni espacios, ver [[discord-servidor-gks]].
 
 - [x] **GGExtras 0.13.0** (2026-09-17): **sonidos de líder e intro** (`gg.takenlead`/`lostlead`/`tiedlead`/`gg.intro`, los
       MP3 del server de CS:GO que ya venían en el addon 3766168370 sin que nadie los usara; se calculan con
