@@ -246,6 +246,10 @@ public class GGConfig
     [JsonPropertyName("TeamplayNadeMod")]
     public double TeamplayNadeMod { get; set; } = 0.5;
 
+    /* Kills per player per level in Teamplay mode. 0 - same as MinKillsPerLevel. MultipleKillsPerLevel still wins */
+    [JsonPropertyName("TeamplayKillsPerLevel")]
+    public int TeamplayKillsPerLevel { get; set; } = 0;
+
 /*    public bool? StatsEnabled { get; set; } */
     /**
     * Give random weapon on warmup.
@@ -670,6 +674,10 @@ public class GGConfig
     /* Can bots win the game otherwise when they reach the last weapon and nothing will happen */
     [JsonPropertyName("BotCanWin")]
     public bool BotCanWin { get; set; } = false;
+
+    /* Comma-separated weapons whose levels bots skip, e.g. "taser,hegrenade": CS2 bots hardly kill with them. Empty - off */
+    [JsonPropertyName("BotSkipWeapons")]
+    public string BotSkipWeapons { get; set; } = "";
 
     /* Allow level up by killing a bot with knife */
     [JsonPropertyName("AllowUpByKnifeBot")]

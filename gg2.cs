@@ -3958,6 +3958,10 @@ namespace GunGame
             {
                 Level = 1;
             }
+            if (player.IsBot && difference > 0)
+            {
+                Level = SkipBotLevels(Level);
+            }
             if ((!Config.BotCanWin) && player.IsBot && (Level > GGVariables.Instance.WeaponOrderCount))
             {
                 /* Bot can't win so just keep them at the last level */
@@ -4243,9 +4247,32 @@ namespace GunGame
         // CS 1.6 gg_teamplay: shared team level, collective kill pool.
         // Goal per level = individual kill requirement x players on the team,
         // reduced on special levels (knife x TeamplayMeleeMod, HE x TeamplayNadeMod).
+        private int TeamplayKillsPerPlayer(int level)
+        {
+            if (GGVariables.Instance.CustomKillsPerLevel.TryGetValue(level, out int kills))
+            {
+                return kills;
+            }
+            return Config.TeamplayKillsPerLevel > 0 ? Config.TeamplayKillsPerLevel : Config.MinKillsPerLevel;
+        }
+        // Bots don't kill with the taser or grenades: skip those levels instead of leaving them stuck.
+        // Never skips the last level, so a skip can't hand out the win.
+        private int SkipBotLevels(int level)
+        {
+            var skipped = Config.BotSkipWeapons.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (skipped.Length == 0)
+                return level;
+            while (level < GGVariables.Instance.WeaponOrderCount
+                && GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == level) is Weapon wep
+                && skipped.Contains(wep.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                level++;
+            }
+            return level;
+        }
         private int TeamplayKillsGoal(TeamState ts)
         {
-            int req = GetCustomKillPerLevel(ts.Level);
+            int req = TeamplayKillsPerPlayer(ts.Level);
             int players = CountPlayersForTeam((CsTeam)ts.TeamNum);
             double mod = 1.0;
             Weapon? wep = GGVariables.Instance.weaponsList.FirstOrDefault(w => w.Level == ts.Level);
@@ -4331,7 +4358,7 @@ namespace GunGame
 
                 if (follow)
                 {
-                    int credit = GetCustomKillPerLevel(ts.Level);
+                    int credit = TeamplayKillsPerPlayer(ts.Level);
                     ts.KillPool += credit;
                     pooled = true;
                     TeamplayBroadcast("team.stolen", Killer.PlayerName, credit, Victim.PlayerName);
@@ -4455,6 +4482,10 @@ namespace GunGame
         {
             ts.KillPool = 0; // no carry-over, like AMXX
             int newLevel = ts.Level + 1;
+            if (TeamIsAllBots(ts.TeamNum))
+            {
+                newLevel = SkipBotLevels(newLevel); // a team with humans plays those levels
+            }
             if (newLevel > GGVariables.Instance.WeaponOrderCount)
             {
                 if (!Config.BotCanWin && TeamIsAllBots(ts.TeamNum))
