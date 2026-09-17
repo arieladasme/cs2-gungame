@@ -87,6 +87,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       El mensaje del mes de `#ranking` había desaparecido (404 al editar, sin rastro en el audit log): se recreó y
       `DiscordMonthlyMessageId` quedó en `1550149660189139116`. **Si un mensaje fijo de `#ranking` da 404, GGExtras
       no llega a sincronizar los roles Top** (la edición falla antes).
+- [ ] **Ver la bienvenida de Discord con un miembro real** (GGExtras 0.14.0, 2026-09-17): el embed se postea en
+      `👋┃bienvenida` al entrar alguien. El dueño no puede salir del server, así que hace falta otra cuenta.
 - [ ] **Desactivar "Bot público"** de `GKS Bot` (Developer Portal → Bot). Discord no lo deja mientras exista enlace de instalación: primero Instalación → Enlace de instalación → Ninguno. Redirect OAuth y Client Secret ya configurados (2026-09-16).
 - [ ] **Probar en el juego**: aviso al entrar un top 3 del mes, `!vincular` con código y el anuncio de ganador en Discord con una partida real.
 - [x] ~~`gg-extensions` sin repositorio remoto~~ (2026-09-17): repo **privado** `arieladasme/gg-extensions`.
@@ -104,7 +106,9 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 
 ## Extensiones pendientes (el grueso del desarrollo por delante)
 
-- [ ] **Plugin de extensión GG** — `GGExtras` en `F:\git\gg-extensions\` (ya repo git, junto a GGTrails). Arrancó con el mensaje de bienvenida; faltan winner effects (volar al ganar), MVP del líder, `gg.intro`/`takenlead`/`lostlead`/`tiedlead`, sonido de inicio de ronda y los webhooks de Discord — vía GunGame API.
+- [ ] **Plugin de extensión GG** — `GGExtras` en `F:\git\gg-extensions\` (repo privado, junto a GGTrails).
+      Ya hechos: bienvenida, webhooks de Discord, show del ganador, sonidos `gg.intro`/`takenlead`/`lostlead`/`tiedlead`,
+      estela y tag del top, mensajes periódicos y logros. **Faltan: MVP del líder y sonido de inicio de ronda.**
 - [x] ~~Advertisements periódicos en chat~~ (2026-09-17, GGExtras 0.13.0): `ChatAds` con 7 mensajes cada 3 min,
       solo con humanos conectados. Falta verlos rotar en el juego.
 - [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
