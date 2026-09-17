@@ -313,8 +313,15 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 - [x] **Show del ganador — GGExtras 0.12.0** (2026-09-17): durante `EndGameDelay` el ganador brilla (props `prop_dynamic` con
       glow que siguen al pawn), levita con `Teleport` por pasos y a cada humano vivo se le gira la mira hacia él una vez.
       Perillas en `GGExtras.json` (`WinnerGlowColor`, `WinnerLevitateHeight`, `WinnerLevitateSeconds`, `WinnerAimEveryone`)
-      y comando `ggx_winnershow <nombre>` por RCON para probarlo sin ganar. **Falta ajustarlo con el usuario en el juego.**
+      y comando `ggx_winnershow <nombre>` por RCON para probarlo sin ganar. Visto por el usuario con una victoria real de
+      bot: brillo y mira OK; **la levitación no se vio** — arreglada (pasos absolutos desde la altura inicial), **pendiente de
+      validar en el juego**.
       Mismo día: `gungame.warmupend.cfg` repite 8 veces "GunGame match starting! GL & HF" (pedido del usuario).
+      También: **fuego amigo solo durante el warmup** (`mp_friendlyfire 1` + `ff_damage_reduction_* 1` en
+      `gungame.warmupstart.cfg`, de vuelta a 0 en `warmupend`) y sin el mensaje "+$0 por neutralizar a un enemigo"
+      (`mp_playercashawards 0` / `mp_teamcashawards 0` en `warmupstart`). Van en los cfg de warmup y no en
+      `gamemode_casual_server.cfg` porque al cargar el mapa ese archivo no los mantiene (con `exec` a mano sí);
+      GG2 ejecuta los cfg de warmup línea por línea después, en cada mapa y reinicio. Verificado por RCON.
 
 - [x] **Tanda B de mejoras — GGExtras 0.11.0** (2026-09-17): tag `[TOP N]` en el scoreboard para los top 3 del mes
       (`ScoreboardTopTag`; solo borra tags que puso él, no el del grupo de Steam); tabla `ggextras_matches` con cada
