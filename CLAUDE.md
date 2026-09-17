@@ -318,13 +318,15 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       Primera victoria, Ladrón (5 robos en una partida), Cabezazo (30 headshots en una partida), Carnicero (100 fileteos)
       y Leyenda (25 victorias); se anuncian en el chat y en `#general`, `!logros` los lista y al cargar el plugin los
       históricos ya cumplidos se otorgan en silencio. **Falta verlo en el juego** (sonidos, estela y un logro real).
+      El aviso de ganador en Discord quedó como "X ha ganado la partida en MAPA fileteando a Y": la victoria siempre
+      llega con el cuchillo, que es el último nivel.
 
 - [x] **Show del ganador — GGExtras 0.12.0** (2026-09-17): durante `EndGameDelay` el ganador brilla (props `prop_dynamic` con
       glow que siguen al pawn), levita con `Teleport` por pasos y a cada humano vivo se le gira la mira hacia él una vez.
       Perillas en `GGExtras.json` (`WinnerGlowColor`, `WinnerLevitateHeight`, `WinnerLevitateSeconds`, `WinnerAimEveryone`)
       y comando `ggx_winnershow <nombre>` por RCON para probarlo sin ganar. Visto por el usuario con una victoria real de
-      bot: brillo y mira OK; **la levitación no se vio** — arreglada (pasos absolutos desde la altura inicial), **pendiente de
-      validar en el juego**.
+      bot: brillo y mira OK; **la levitación no se vio** — arreglada con pasos absolutos desde la altura inicial y
+      verificada con bots (el log muestra z=4.03 → z=74.03, los 70 unidades configurados); falta que el usuario la vea.
       Mismo día: `gungame.warmupend.cfg` repite 8 veces "GunGame match starting! GL & HF" (pedido del usuario).
       También: **fuego amigo solo durante el warmup** (`mp_friendlyfire 1` + `ff_damage_reduction_* 1` en
       `gungame.warmupstart.cfg`, de vuelta a 0 en `warmupend`) y sin el mensaje "+$0 por neutralizar a un enemigo"
