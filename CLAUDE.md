@@ -82,7 +82,7 @@ Puntos clave:
 
 **Feature local mayor: modo TEAMPLAY (2026-07-16)** — `gg_teamplay` estilo CS 1.6 (AMXX): nivel y pozo de kills compartidos por equipo (meta = req individual × jugadores, mods cuchillo 0.33 / HE 0.50), robo acredita el req individual al pozo, victoria de EQUIPO real vía `TerminateRound`. Config `TeamPlay` 0/1/2 + comando `gg_teamplay` (override en memoria — `LoadConfig` no lo pisa). Región `#region Teamplay` en gg2.cs + branches `IsTeamplayActive`. Candidato a PR upstream.
 
-**Divergencias locales vs upstream v1.2.4 (tras merge 2026-07-16 — upstream ya trae net10/1.0.371/VelocityModifier):** (1) `ReloadActiveWeapon`: `SetStateChanged` a `m_iClip1` en vez de `m_pReserveAmmo` — revive `ReloadWeapon: true` (recarga al matar); (2) `StartTripleEffects`: timer 0.25s re-aplicando `VelocityModifier` mientras dura el bonus multi-nivel (el engine lo recupera a 1.0 solo — con una sola asignación el efecto no se percibe; upstream lo asigna una vez); (3) `AlltalkOnWin`: agrega `sv_alltalk` junto a `sv_full_alltalk`; (4) `ExecConfigFile`: los cfg del config folder se ejecutan leyendo sus líneas, no con `exec` (ver gotcha en §8 — con `exec` la votación de mapa nunca arrancaba); (5) `Respawn`: si `SkipSpawn` descarta el respawn (muerte dentro de los 0.8 s anti doble spawn), reintenta 1 s después — sin esto el jugador queda muerto hasta fin de ronda; (6) `BlockWeaponSwitchIfKnife` implementado: tras subir con cuchillo, `slot3` al frame siguiente; (7) `EventRoundStartHandler` borra `game_player_equip` en cada ronda (mapas que regalan armas al empezar); (8) niveles de granada y taser: selección del arma desde el server (`slot4` / `use weapon_taser`) — el `slot4` enviado al cliente lo ignoran los bots; (9) `OnMapStart` limpia `teamplayOverride`: `gg_teamplay` vale solo para la partida en curso. Candidatos a PR upstream. Al mergear upstream nuevo, verificar que sobrevivan (grep `m_iClip1`, `speedTimer`, `sv_alltalk`, `ExecConfigFile`, `SkipSpawn`, `BlockWeaponSwitchIfKnife`, `game_player_equip`, `ExecuteClientCommandFromServer`, `teamplayOverride = null`).
+**Divergencias locales vs upstream v1.2.4 (tras merge 2026-07-16 — upstream ya trae net10/1.0.371/VelocityModifier):** (1) `ReloadActiveWeapon`: `SetStateChanged` a `m_iClip1` en vez de `m_pReserveAmmo` — revive `ReloadWeapon: true` (recarga al matar); (2) `StartTripleEffects`: timer 0.25s re-aplicando `VelocityModifier` mientras dura el bonus multi-nivel (el engine lo recupera a 1.0 solo — con una sola asignación el efecto no se percibe; upstream lo asigna una vez); (3) `AlltalkOnWin`: agrega `sv_alltalk` junto a `sv_full_alltalk`; (4) `ExecConfigFile`: los cfg del config folder se ejecutan leyendo sus líneas, no con `exec` (ver gotcha en §8 — con `exec` la votación de mapa nunca arrancaba); (5) `Respawn`: si `SkipSpawn` descarta el respawn (muerte dentro de los 0.8 s anti doble spawn), reintenta 1 s después — sin esto el jugador queda muerto hasta fin de ronda; (6) `BlockWeaponSwitchIfKnife` implementado: tras subir con cuchillo, `slot3` al frame siguiente; (7) `EventRoundStartHandler` borra `game_player_equip` en cada ronda (mapas que regalan armas al empezar); (8) niveles de granada y taser: selección del arma desde el server (`slot4` / `use weapon_taser`) — el `slot4` enviado al cliente lo ignoran los bots; (9) `OnMapStart` limpia `teamplayOverride`: `gg_teamplay` vale solo para la partida en curso; (10) `gg_distance` funciona desde la consola (upstream exigía un jugador en un comando `SERVER_ONLY`, así que nunca hacía nada); (11) un sonido vacío en la config (`MolotovKillSound: ""`) no suena y no loguea error. Candidatos a PR upstream. Al mergear upstream nuevo, verificar que sobrevivan (grep `m_iClip1`, `speedTimer`, `sv_alltalk`, `ExecConfigFile`, `SkipSpawn`, `BlockWeaponSwitchIfKnife`, `game_player_equip`, `ExecuteClientCommandFromServer`, `teamplayOverride = null`, `OnRespawnDistance`, `soundValue ?? ""`).
 
 **Gotcha mayor (2026-09-11): Metamod más nuevo NO es mejor.** El 2026-09-08 Metamod bumpeó la
 SourceHook API a **018** (commit "Bump MMS Api version, and min load version", desde el snapshot
@@ -222,13 +222,12 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
       en el transcript de la sesión del 2026-09-15; la password RCON, parcialmente, en la del 2026-09-16.
-- [ ] **Pool de mapas**: medir spawns de los 5 mapas previos sin medir (`ar_pool_day`, `ar_shoots`,
-      `ar_baggage`, `aim_map`, `fy_iceworld`) con `tools/maptest.py`; revisar en persona `fy_simpsons`
-      (muertes por `trigger_hurt`); borrar del disco del server la descarga huérfana `3461824328`
-      (segundo addon viejo de MultiAddonManager) si ya no se usa. Opcional: entrar a `yaksart_qishloq`
+- [ ] **Pool de mapas**: decidir qué hacer con `aim_map_d` 3070549948 (ver tabla: no entra ningún bot); revisar en
+      persona `fy_simpsons` (muertes por `trigger_hurt`). **`3461824328` NO es huérfano** (2026-09-17): es el addon de QuakeSounds de Kandru,
+      montado por `mm_extra_addons`, del que salen los 12 sonidos `QuakeSoundsD.*`; no borrarlo. Opcional: entrar a `yaksart_qishloq`
       3772103497 y `aim_dota_mid_d` 3307132429, descartados porque no entran bots.
 - [x] ~~Reponer los 3 mapas Workshop al pool~~ (2026-09-15): `GGMCmaps.json` quedó con 6 mapas —
-      3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map` 3070549948.
+      3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map_d` 3070549948.
       Aplicado en caliente con RCON `reloadmaps` (comando de GG1MapChooser, releé el archivo sin
       reiniciar el server ni cortar la partida en curso).
 - [x] **Pool ampliado a 21 mapas** (2026-09-16/17): +15 mapas Workshop en dos tandas, probados uno por uno en producción
@@ -249,17 +248,24 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       | `fy_snow_legacy` | 3592238209 | 16/16 | 32 |
       | `awp_bungalow_rz` | 3749777262 | 16/16 | 32 |
       | `gg_mini_dust` | 3361055721 | 16/16 | 32 |
+      | `fy_iceworld` | 3070238628 | 16/16 | 32 |
       | `de_vc2_inferno_gg1` | 3329658347 | 16/16 | 32 |
+      | `ar_shoots` | stock | 17/17 | 34 |
       | `aim_map_s2r` | 3070260370 | 18/18 | 36 |
+      | `ar_baggage` | stock | 20/20 | 40 |
       | `gg_lotus_extended` | 3378140417 | 24/24 | 48 |
       | `gg_sex_fix_cmg` | 3406515004 | 30/30 | 60 |
+      | `ar_pool_day` | stock | 32/32 | 64 |
       | `fy_buzzkill523` | 3277118494 | 32/32 | 64 |
       | `gg_fy_back_street_cs2` | 3429238349 | 32/32 | 64 |
 
       Descartados: `aim_awp` 3444237717 (5/5), `awp_duel` 3608811044 (3/3), `aim_pistol_cs2` 3778249348 (1/1),
       `am_westwood_wf` 3386236697 (1/1), `yaksart_qishloq` 3772103497 y `aim_dota_mid_d` 3307132429 (no entra
       ningún bot, así que tampoco se pudieron medir los spawns) y `Desert (CS:GO)` 256816355 (ítem legacy de
-      CS:GO, solo trae `_legacy.bin`). Pool: **21 mapas** tras la segunda tanda (2026-09-17). De los 6 mapas previos del pool, solo `fy_snow_legacy` está medido.
+      CS:GO, solo trae `_legacy.bin`). Pool: **21 mapas** tras la segunda tanda (2026-09-17). Los 6 mapas previos quedaron medidos el 2026-09-17 (los 3 `ar_*` salieron de logs de partidas reales), salvo
+      **`aim_map_d` 3070549948: carga en 5 s pero no entra ningún bot**, igual que los dos descartados, aun sin hibernación.
+      Figuraba en `GGMCmaps.json` como `aim_map` (nombre interno real `aim_map_d`), por eso GG1MapChooser registraba
+      `Can't find aim_map_d in Maps_from_List`.
       Con `-maxplayers 16` los bots se quedan en **15** incluso en mapas con spawns de sobra: el tope es del
       server, no del mapa. En `fy_simpsons` hubo 6 muertes por `trigger_hurt` (4 en los primeros 10 s) —
       revisar en persona si hay spawns dentro de una zona de daño.
@@ -279,8 +285,9 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       no llega a sincronizar los roles Top** (la edición falla antes).
 - [ ] **Desactivar "Bot público"** de `GKS Bot` (Developer Portal → Bot). Discord no lo deja mientras exista enlace de instalación: primero Instalación → Enlace de instalación → Ninguno. Redirect OAuth y Client Secret ya configurados (2026-09-16).
 - [ ] **Probar en el juego**: aviso al entrar un top 3 del mes, `!vincular` con código y el anuncio de ganador en Discord con una partida real.
-- [ ] **`gg-extensions` sin repositorio remoto**: GGExtras, GGTrails y los emojis solo existen en el disco local.
-- [ ] Bajar `sv_hibernate_when_empty` a su valor real: quedó en 0 para pruebas.
+- [x] ~~`gg-extensions` sin repositorio remoto~~ (2026-09-17): repo **privado** `arieladasme/gg-extensions`.
+- [x] ~~Bajar `sv_hibernate_when_empty`~~ (2026-09-17): de vuelta en 1. No está en ningún cfg: `maptest.py` lo baja a 0
+      en memoria y hay que reponerlo a mano al terminar.
 - [ ] **Corregir la hora de las tareas de teamplay** cuando cambie el horario. El panel corre en hora de Europa
       (UTC+2 hoy) y Chile en UTC-3, y el cron no maneja zonas horarias. El 2026-10-25 (Europa pasa a UTC+1)
       restar 1 a la hora de las 3 tareas (16→15, 22→21, 2→1); el 2027-03-28 volver a sumarla, y el
