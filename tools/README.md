@@ -11,6 +11,7 @@ argumentos quedan en el historial del shell y en el listado de procesos.
 | `rcon.py` | Cliente Source RCON. `RCON_HOST` `RCON_PORT` `RCON_PASS` |
 | `a2s.py` | Consulta A2S_INFO: muestra el server como lo ve el browser de Steam, util para verificar el hostname tal cual viaja al cliente. `A2S_HOST` `A2S_PORT` |
 | `rdsnode-disk.sh` | Reporte de disco contra la API del panel. `PTK` |
+| `maptest.py` | Carga mapas Workshop uno por uno con 16 bots y reporta spawns, carga y errores, antes de sumarlos a `GGMCmaps.json`. `RCON_*` + `PTK` |
 
 ```bash
 RCON_HOST=<ip> RCON_PORT=<puerto> RCON_PASS=<pass> python tools/rcon.py status
