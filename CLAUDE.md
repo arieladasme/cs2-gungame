@@ -222,12 +222,11 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
 
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
       en el transcript de la sesión del 2026-09-15; la password RCON, parcialmente, en la del 2026-09-16.
-- [ ] **Pool de mapas**: decidir qué hacer con `aim_map_d` 3070549948 (ver tabla: no entra ningún bot); revisar en
-      persona `fy_simpsons` (muertes por `trigger_hurt`). **`3461824328` NO es huérfano** (2026-09-17): es el addon de QuakeSounds de Kandru,
+- [ ] **Pool de mapas**: revisar en persona `fy_simpsons` (muertes por `trigger_hurt`). **`3461824328` NO es huérfano** (2026-09-17): es el addon de QuakeSounds de Kandru,
       montado por `mm_extra_addons`, del que salen los 12 sonidos `QuakeSoundsD.*`; no borrarlo. Opcional: entrar a `yaksart_qishloq`
       3772103497 y `aim_dota_mid_d` 3307132429, descartados porque no entran bots.
 - [x] ~~Reponer los 3 mapas Workshop al pool~~ (2026-09-15): `GGMCmaps.json` quedó con 6 mapas —
-      3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map_d` 3070549948.
+      3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map_d` 3070549948 (sacado el 2026-09-17).
       Aplicado en caliente con RCON `reloadmaps` (comando de GG1MapChooser, releé el archivo sin
       reiniciar el server ni cortar la partida en curso).
 - [x] **Pool ampliado a 21 mapas** (2026-09-16/17): +15 mapas Workshop en dos tandas, probados uno por uno en producción
@@ -263,7 +262,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en §4).
       `am_westwood_wf` 3386236697 (1/1), `yaksart_qishloq` 3772103497 y `aim_dota_mid_d` 3307132429 (no entra
       ningún bot, así que tampoco se pudieron medir los spawns) y `Desert (CS:GO)` 256816355 (ítem legacy de
       CS:GO, solo trae `_legacy.bin`). Pool: **21 mapas** tras la segunda tanda (2026-09-17). Los 6 mapas previos quedaron medidos el 2026-09-17 (los 3 `ar_*` salieron de logs de partidas reales), salvo
-      **`aim_map_d` 3070549948: carga en 5 s pero no entra ningún bot**, igual que los dos descartados, aun sin hibernación.
+      **`aim_map_d` 3070549948: carga en 5 s pero no entra ningún bot**, igual que los dos descartados, aun sin hibernación;
+      **sacado del pool y de `LowPlayerMaps` el 2026-09-17** (pool: 20 mapas) y borrada su descarga.
       Figuraba en `GGMCmaps.json` como `aim_map` (nombre interno real `aim_map_d`), por eso GG1MapChooser registraba
       `Can't find aim_map_d in Maps_from_List`.
       Con `-maxplayers 16` los bots se quedan en **15** incluso en mapas con spawns de sobra: el tope es del
