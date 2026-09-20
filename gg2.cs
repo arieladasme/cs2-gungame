@@ -204,6 +204,9 @@ namespace GunGame
         // Runtime override set by the gg_teamplay command, cleared on map start. Kept outside Config
         // because RestartGame() -> LoadConfig() re-reads the json from disk and would wipe it.
         private int? teamplayOverride = null;
+        // Mode armed with "gg_teamplay <mode> next": waits for the map change instead of cutting
+        // the running match short.
+        private int? teamplayNextMap = null;
         private bool IsTeamplayActive => GGVariables.Instance.TeamplayActive;
         public List<int> SkipSpawn = new();
         public List<CCSWeaponBaseGun> MapWeaponList = new();
@@ -905,8 +908,10 @@ namespace GunGame
         }
         private void OnMapStart(string name)
         {
-            // gg_teamplay applies to the current match only; the next map goes back to Config.TeamPlay.
-            teamplayOverride = null;
+            // gg_teamplay applies to the current match only; the next map goes back to Config.TeamPlay,
+            // unless a mode was armed with "next" and is being picked up right here.
+            teamplayOverride = teamplayNextMap;
+            teamplayNextMap = null;
             // EndMultiplayerGameNormal drops mp_winlimit to 1 so the round that closes the match
             // shows a team victory instead of a cancelled match, and nothing puts it back: CS2
             // rejects the cvar from a gamemode cfg (DISALLOWED WORKSHOP CONVAR), so it can only be
@@ -5127,21 +5132,25 @@ namespace GunGame
                 Logger.LogError($"Error call gg_respawn with arg {command.GetArg(1)}");
             }
         }
-        [ConsoleCommand("gg_teamplay", "Set Teamplay mode: 0 - off, 1 - on, 2 - random each match. Restarts the game.")]
+        [ConsoleCommand("gg_teamplay", "Set Teamplay mode: 0 - off, 1 - on, 2 - random each match. Restarts the game, or add 'next' to start it on the next map.")]
         [CommandHelper(whoCanExecute: CommandUsage.SERVER_ONLY)]
         public void OnTeamplayCommand(CCSPlayerController? playerController, CommandInfo command)
         {
             if (command.ArgCount < 2) { return; }
-            if (int.TryParse(command.GetArg(1), out int mode) && mode >= 0 && mode <= 2)
-            {
-                teamplayOverride = mode; // consumed by InitVariables on restart; survives LoadConfig()
-                Logger.LogInformation($"[GUNGAME] gg_teamplay {mode} - restarting game");
-                RestartGame();
-            }
-            else
+            if (!int.TryParse(command.GetArg(1), out int mode) || mode < 0 || mode > 2)
             {
                 Logger.LogError($"Error call gg_teamplay with arg {command.GetArg(1)} (expected 0, 1 or 2)");
+                return;
             }
+            if (command.ArgCount > 2 && command.GetArg(2).Equals("next", StringComparison.OrdinalIgnoreCase))
+            {
+                teamplayNextMap = mode; // picked up by OnMapStart, so the running match is left alone
+                Logger.LogInformation($"[GUNGAME] gg_teamplay {mode} next - armed for the next map");
+                return;
+            }
+            teamplayOverride = mode; // consumed by InitVariables on restart; survives LoadConfig()
+            Logger.LogInformation($"[GUNGAME] gg_teamplay {mode} - restarting game");
+            RestartGame();
         }
         [ConsoleCommand("gg_distance", "Set Respawn Distance")]
         [CommandHelper(whoCanExecute: CommandUsage.SERVER_ONLY)]
