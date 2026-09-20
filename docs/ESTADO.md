@@ -114,7 +114,11 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 
 - [ ] **Plugin de extensión GG** — `GGExtras` en `F:\git\gg-extensions\` (repo privado, junto a GGTrails).
       Ya hechos: bienvenida, webhooks de Discord, show del ganador, sonidos `gg.intro`/`takenlead`/`lostlead`/`tiedlead`,
-      estela y tag del top, mensajes periódicos y logros. **Faltan: MVP del líder y sonido de inicio de ronda.**
+      estela y tag del top, mensajes periódicos y logros. **MVP del líder** (2026-09-20, 0.19.0): la estrella del
+      scoreboard marca a quien va arriba — las rondas de GunGame casi nunca terminan, así que esa columna vivía
+      en cero; `ggx_mvp` por RCON lista nivel y estrella de cada uno. Falta verla en el juego. El **sonido de
+      inicio de ronda** ya lo cubre QuakeSounds (`round_start` → `QuakeSoundsD.Prepare`, más el "Play" del
+      freeze end): no hace falta en GGExtras.
 - [x] ~~Advertisements periódicos en chat~~ (2026-09-17, GGExtras 0.13.0): `ChatAds` con 7 mensajes cada 3 min,
       solo con humanos conectados. Falta verlos rotar en el juego.
 - [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
