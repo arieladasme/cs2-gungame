@@ -2935,6 +2935,14 @@ namespace GunGame
                             FastSwitchWithCheck(player, newWeapon, true, player.LevelWeapon.LevelIndex);
                         } */
         }
+        // Weapon the player is holding right now, or null when it cannot be read.
+        private string? ActiveWeaponName(CCSPlayerController player)
+        {
+            if (!TryGetPlayerPawn(player, out var pawn))
+                return null;
+            var weapon = pawn.WeaponServices?.ActiveWeapon?.Value;
+            return weapon != null && weapon.IsValid ? weapon.DesignerName : null;
+        }
         private void GiveExtraNade(CCSPlayerController player)
         {
             if (Config.ExtraNade)
@@ -2942,13 +2950,17 @@ namespace GunGame
                 /* Do not give them another nade if they already have one */
                 if (!HasWeapon(player, "weapon_hegrenade"))
                 {
+                    // GiveNamedItem deploys the nade, so a knife kill on the grenade level
+                    // would pull the player off the knife. Re-select what they held a frame later.
+                    string? held = Config.BlockWeaponSwitchOnNade ? ActiveWeaponName(player) : null;
                     TryGiveNamedItem(player, "weapon_hegrenade", "GiveExtraNade");
-                    /*                    GivePlayerItemWrapper(player, "weapon_hegrenade", Plugin.Config.BlockWeaponSwitchOnNade);
-                      Here about the switching lock. Let's put it aside for now
-                                        if (!blockWeapSwitch) {
-                                            UTIL_UseWeapon(client, g_WeaponIdHegrenade);
-                                            UTIL_FastSwitchWithCheck(client, newWeapon, true, g_WeaponIdHegrenade);
-                                        } */
+                    if (held != null && held != "weapon_hegrenade")
+                    {
+                        Server.NextFrame(() =>
+                        {
+                            if (player.IsValid) player.ExecuteClientCommandFromServer("use " + held);
+                        });
+                    }
                 }
             }
         }
