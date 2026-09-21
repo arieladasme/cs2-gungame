@@ -206,7 +206,7 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
   Panorama que viaja en el addon del Workshop. Trampas en `nvmxre/cs2-hud-panel` (docs/GOTCHAS.md): el root del
   XML sin `id`, nada de `<Image>` (la imagen va como `background-image`), crear la entidad recién en el
   `round_start` (antes envenena el caché de entidades de CSS para todo el proceso) y `StrLayout` con la ruta
-  fuente completa (`panorama/layout/custom_game/x.xml`). Para probar sin publicar: `hud/build.ps1 -Dev`.
+  fuente completa (`panorama/layout/custom_game/x.xml`). Para probar sin publicar: `gg-extensions/addon/build.ps1 -Dev`.
 - Commits: Conventional Commits en español (`feat:`, `fix:`), cuerpo en imperativo es-MX explicando el porqué si no es evidente.
 
 ---

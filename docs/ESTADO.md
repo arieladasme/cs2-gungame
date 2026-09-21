@@ -148,16 +148,17 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 - [x] **Bienvenida con stats** (2026-09-21, GGExtras 0.23.0): "Bienvenid@, {PLAYER}" y debajo `{STATS}` = "Tienes N
       victorias con N fileteos" (totales históricos, leídos de MySQL al conectar). Ya va en el `CenterHtml` de
       producción. Falta verlo con una cuenta que tenga historial.
-- [ ] **Publicar el banner en panel propio** (`custom_hud_layout`, update de CS2 del 24-08-2026): sin marco dorado, sin
-      parpadeo y con el logo dentro del addon. Probado en local el 2026-09-21. El layout vive en `gg-extensions/hud/` y
-      `hud/build.ps1` lo compila dentro de `content/csgo_addons/gungame_sounds`. Falta: recompilar el addon **entero**
-      (sonidos + panorama), publicarlo con Workshop Manager (**Sin listar**, nunca *Oculto*), esperar moderación y
-      recién ahí poner `WelcomeLayoutSeconds: 6` en el `GGExtras.json` de producción. Con 0 ni se crea la entidad.
-      Antes de publicar, confirmar desde qué carpeta salió la versión que está en moderación, para no pisarla.
-      Al terminar, borrar los compilados sueltos del cliente en `game/csgo/panorama/*/custom_game/gks_*`.
-- [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
-      de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
-      confirmar que la nueva pase.
+- [ ] **Kit del Workshop** (2026-09-21): el addon `3766168370` pasó a llamarse **"GKS GunGame - Kit"** y junta todo lo que
+      bajan los clientes: los 13 `gg.*`, los 12 `gg.quake.*` (voces del server de CS:GO, set 1 de `sm_quakesounds`) y el
+      banner en panel propio (`custom_hud_layout`) con un **QR al Discord**, porque un layout de servidor no puede abrir
+      URLs (ver [[hud-central-cs2-no-sostiene-imagen]]). Probado en local, QR escaneado con el celular. Fuente versionada en `gg-extensions/addon/`
+      (reemplaza a `F:\git\gungame-sounds-addon`, que no estaba en git); `addon/build.ps1` compila todo. Falta, en orden:
+      1. Publicar con Workshop Manager y esperar la moderación. Lo publicado hasta ahora coincide con la carpeta local
+         (4.427.500 bytes = los 17 MP3), así que no se pisa nada.
+      2. Con la versión nueva aprobada, en producción: `QuakeSounds.json` a `gg.quake.*` (y `soundevent_file` a
+         `soundevents/soundevents_addon.vsndevts`), `quakesounds reload`, probar y recién ahí sacar `3461824328`
+         (Kandru) de `mm_extra_addons` y `mm_client_extra_addons`. `WelcomeLayoutSeconds: 6` en `GGExtras.json`.
+      3. Borrar los compilados sueltos del cliente en `game/csgo/panorama/*/custom_game/gks_*`.
 
 ## Extensiones pendientes (el grueso del desarrollo por delante)
 
