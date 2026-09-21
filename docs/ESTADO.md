@@ -27,6 +27,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
       en el transcript de la sesión del 2026-09-15; la password RCON, parcialmente, en la del 2026-09-16. El **token del bot de Discord** quedó entero en el de la sesión del 2026-09-17,
       al leer el `GGExtras.json` del server: rotarlo primero (Portal → Bot → Restablecer token) y reponerlo en ese JSON.
+      El **2026-09-20 se sumó la password de MySQL**, impresa entera en el transcript al leer `gungame-db.json`:
+      rotarla en el panel (Databases) y reponerla en `gungame-db.json`, `GGExtras.json` y el `mysql_dsn` de cs2-watch.
 - [ ] **Pool de mapas**: revisar en persona `fy_simpsons` (muertes por `trigger_hurt`). **`3461824328` NO es huérfano** (2026-09-17): es el addon de QuakeSounds de Kandru,
       montado por `mm_extra_addons`, del que salen los 12 sonidos `QuakeSoundsD.*`; no borrarlo. Opcional: entrar a `yaksart_qishloq`
       3772103497 y `aim_dota_mid_d` 3307132429, descartados porque no entran bots.
@@ -34,6 +36,31 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       3 stock `ar_*` + `fy_iceworld` 3070238628, `fy_snow_legacy` 3592238209, `aim_map_d` 3070549948 (sacado el 2026-09-17).
       Aplicado en caliente con RCON `reloadmaps` (comando de GG1MapChooser, releé el archivo sin
       reiniciar el server ni cortar la partida en curso).
+- [x] **Pool en 30 mapas** (2026-09-21): +12 de la colección de candidatos `3805795063` y links sueltos, revisados
+      primero en local (spawns y nav con Source2Viewer-CLI) y después con `maptest.py`: todos cargan en 5-41 s con
+      15 bots y sin errores. El usuario sacó `fy_simpsons` y `awp_india` desde cs2-watch (quedan en
+      `GGMCmaps.disabled.json`). Los más chicos para 8v8: `aim_office` (9/9) y `orangebattlebox` (12/12), con
+      ~70 respawns/min sin spawn libre (el pool viejo va de 11 a 80). `mini_dust_pro` puede ser duplicado de `gg_mini_dust`.
+
+      | Mapa | Workshop | Spawns CT/T |
+      |---|---|---|
+      | `aim_office` | 3254475625 | 9/9 |
+      | `aim_homage` | 3678786768 | 10/10 |
+      | `aim_usp_anubis` | 3776547420 | 10/10 |
+      | `orangebattlebox` | 3372856454 | 12/12 |
+      | `awp_cheese_2` | 3700626047 | 16/16 |
+      | `gg_ar_banged_on` | 3615738541 | 16/16 |
+      | `mini_dust_pro` | 3429868858 | 16/16 |
+      | `scarab` | 3578033223 | 16/16 |
+      | `awp_striptease` | 3682151866 | 18/18 |
+      | `aim_usps` | 3645850208 | 25/28 |
+      | `ev` (fy_targetdust) | 3071868907 | 26/28 |
+      | `arm_dust_go` (ArmRace_Dusty) | 3412198125 | 32/32 |
+
+      Descartados por spawns: `ar_office` 3341775853 (3/3), `cs_solo` 3624458066 (4/4), `aim_entropiq` 3636766382 (4/4),
+      `aiminfernomap` 3482557789 (3/3). Durante la prueba el server perdió la conexión de Steam al backend
+      (`download failed ... doesn't have a connection to the back-end`): los mapas ya bajados cargaban, los nuevos no;
+      se arregló reiniciando. El error solo sale en la consola del juego (websocket del panel), no en el log de CSS.
 - [x] **Pool ampliado a 21 mapas** (2026-09-16/17): +15 mapas Workshop en dos tandas, probados uno por uno en producción
       con bots (cargan en 5-31 s, sin recargas ni errores de spawn). **Regla del pool: un mapa necesita
       spawns para los slots del server** — CS2 no deja entrar a un equipo más jugadores que spawns tiene
@@ -92,6 +119,15 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       `👋┃bienvenida` al entrar alguien. El dueño no puede salir del server, así que hace falta otra cuenta.
 - [ ] **Desactivar "Bot público"** de `GKS Bot` (Developer Portal → Bot). Discord no lo deja mientras exista enlace de instalación: primero Instalación → Enlace de instalación → Ninguno. Redirect OAuth y Client Secret ya configurados (2026-09-16).
 - [ ] **Probar en el juego**: aviso al entrar un top 3 del mes, `!vincular` con código y el anuncio de ganador en Discord con una partida real.
+- [ ] **Probar en el juego lo desplegado el 2026-09-20**: inmunidad de 0,5 s al respawn (GGExtras 0.20.0), la estrella
+      de MVP en el scoreboard (0.19.0, `ggx_mvp` por RCON la lista sin entrar), que el nivel de granada ya no se pase
+      acuchillando (`KnifeProHE: false`) y que la granada extra no saque del cuchillo (GG2, divergencia #14).
+- [ ] **Ver la baja diferida del mapa actual en un cambio de mapa real** (GGExtras 0.21.0, 2026-09-21): el ✕ de
+      cs2-watch sobre el mapa en juego lo deja *pendiente* y `OnMapStart` debería sacarlo del pool al cargar el
+      siguiente. Probado por RCON todo lo demás: sacar/devolver, rechazo del nextmap y que GG1MapChooser recarga.
+- [x] **Sacar y devolver mapas del pool desde cs2-watch** (2026-09-21, GGExtras 0.21.0): `ggx_map_off` /
+      `ggx_map_on` mueven la entrada entre `cfg/GGMCmaps.json` y `cfg/GGMCmaps.disabled.json` y corren `reloadmaps`.
+      El nextmap no se puede sacar (hay que cambiarlo antes); solo soporta el formato de un pool.
 - [x] ~~`gg-extensions` sin repositorio remoto~~ (2026-09-17): repo **privado** `arieladasme/gg-extensions`.
 - [x] ~~Bajar `sv_hibernate_when_empty`~~ (2026-09-17): de vuelta en 1. No está en ningún cfg: `maptest.py` lo baja a 0
       en memoria y hay que reponerlo a mano al terminar.
@@ -121,10 +157,19 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       freeze end): no hace falta en GGExtras.
 - [x] ~~Advertisements periódicos en chat~~ (2026-09-17, GGExtras 0.13.0): `ChatAds` con 7 mensajes cada 3 min,
       solo con humanos conectados. Falta verlos rotar en el juego.
+- [ ] **cs2-watch sin commitear** (2026-09-20): multi-servidor, pestaña Datos, i18n es/en, log legible, botones de
+      bots y lista de mapas. 13 archivos tocados y 6 nuevos en `F:\git\cs2-watch`, compilados y probados contra
+      producción. Detalle en `docs/Bitacora-2026-09-20.md`.
 - [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
 - [ ] **Darle valor al top 10 dentro del server**: hecho el tag `[TOP N]` en el scoreboard y la estela de color
       (top 3), el aviso en chat al entrar un top 3 y los roles de Discord (Top 1/2/3/10 del mes + permanentes por
       logro). Queda el **modelo/personaje**, lo único con riesgo de reglas de Valve.
+- [ ] **Bug en `Respawn` de GG2** (visto el 2026-09-20 en el log, preexistente): el reintento del respawn lanza
+      `ArgumentNullException: Schema target points to null` al leer `TeamNum` de un pawn que ya no existe. Sale como
+      `[EROR] (cssharp:Core) Error invoking callback` cada tantos minutos. Falta validar el pawn dentro del lambda.
+- [ ] **`No suitable spawn points` con el server lleno**: con 15 jugadores en mapas de 10 spawns por equipo (capacidad
+      20 según la tabla de abajo) el log se llena igual. Huele a `SpawnDistance` rechazando puntos por cercanía a
+      enemigos, no a falta de spawns. Revisar antes de tocar el pool.
 - [ ] `MinKillsPerLevel` sigue en 3 en el modo individual (decisión del usuario, 2026-09-17); en teamplay ya son 2.
 - [ ] Evaluar extensiones extra (`docs/CS2-GunGame-Mejoras-Extra.md`: Bullet Effects, ranks, Discord).
 - [ ] **Crear el mapa `gks_2rooms`** en Hammer: réplica del 2_rooms de 1.6 (el usuario hizo la versión CSGO `2_rooms_w`, 449416365; no hay port a CS2). Dos cuartos de 1024×1024, techo 256, pared divisoria de 64 con puerta de 192 del piso al techo. 16 spawns por equipo, `light_omni2` + `env_combined_light_probe_volume` (sin él los jugadores se ven negros), lightmap 1024 para que pese pocos MB. Subir al Workshop como **"No listado"**, nunca "Oculto" (ver loop en CLAUDE.md §4), y versionar el `.vmap` fuera de la carpeta de Steam.
