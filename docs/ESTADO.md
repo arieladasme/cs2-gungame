@@ -153,8 +153,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       banner en panel propio (`custom_hud_layout`) con un **QR al Discord**, porque un layout de servidor no puede abrir
       URLs (ver [[hud-central-cs2-no-sostiene-imagen]]). Probado en local, QR escaneado con el celular. Fuente versionada en `gg-extensions/addon/`
       (reemplaza a `F:\git\gungame-sounds-addon`, que no estaba en git); `addon/build.ps1` compila todo. Falta, en orden:
-      1. Publicar con Workshop Manager y esperar la moderación. Lo publicado hasta ahora coincide con la carpeta local
-         (4.427.500 bytes = los 17 MP3), así que no se pisa nada.
+      1. ~~Publicar con Workshop Manager~~ (2026-09-21 17:04, 35 archivos, 5.082.720 bytes). **Esperando moderación**:
+         hasta que Steam la apruebe los clientes siguen bajando la versión anterior (solo los 17 MP3).
       2. Con la versión nueva aprobada, en producción: `QuakeSounds.json` a `gg.quake.*` (y `soundevent_file` a
          `soundevents/soundevents_addon.vsndevts`), `quakesounds reload`, probar y recién ahí sacar `3461824328`
          (Kandru) de `mm_extra_addons` y `mm_client_extra_addons`. `WelcomeLayoutSeconds: 6` en `GGExtras.json`.

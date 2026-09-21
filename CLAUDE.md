@@ -207,6 +207,10 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
   XML sin `id`, nada de `<Image>` (la imagen va como `background-image`), crear la entidad recién en el
   `round_start` (antes envenena el caché de entidades de CSS para todo el proceso) y `StrLayout` con la ruta
   fuente completa (`panorama/layout/custom_game/x.xml`). Para probar sin publicar: `gg-extensions/addon/build.ps1 -Dev`.
+- **Workshop Manager solo empaqueta las carpetas de `AddonConfig/VpkDirectories`** en `game/csgo/gameinfo.gi`
+  (2026-09-21). De `panorama/` entran `layout/custom_game`, `styles/custom_game`, `images/map_icons` e
+  `images/overheadmaps`; lo que esté en otra carpeta compila y se ve en la prueba local, pero **no se sube**, y no hay
+  ningún aviso. Antes de enviar, abrir *Contents* y comparar la cantidad y el peso con lo compilado.
 - Commits: Conventional Commits en español (`feat:`, `fix:`), cuerpo en imperativo es-MX explicando el porqué si no es evidente.
 
 ---
