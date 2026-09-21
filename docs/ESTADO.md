@@ -126,6 +126,14 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 - [ ] **Ver la baja diferida del mapa actual en un cambio de mapa real** (GGExtras 0.21.0, 2026-09-21): el ✕ de
       cs2-watch sobre el mapa en juego lo deja *pendiente* y `OnMapStart` debería sacarlo del pool al cargar el
       siguiente. Probado por RCON todo lo demás: sacar/devolver, rechazo del nextmap y que GG1MapChooser recarga.
+- [ ] **Validar las stats por partida con una partida real** (GGExtras 0.24.0, desplegado 2026-09-21): tabla
+      `ggextras_match_players` (una fila por humano: equipo, `won`, nivel final, kills, `bot_kills`, muertes, headshots,
+      fileteos dados y recibidos, segundos) y columna `teamplay` en `ggextras_matches`. La API no expone el modo:
+      una partida que termina sin ningún `LevelChangeEvent` fue teamplay, porque GG2 sale de `ChangeLevel` antes de
+      dispararlo. Además, en teamplay la victoria **ya no suma al ranking del mes** (decisión del usuario; GG2 tampoco
+      la cuenta en el histórico). Tabla y columna creadas y plugin suscrito. Falta revisar que haya una fila por
+      humano, `won=1` en el ganador (o en todo el equipo si fue teamplay) y `seconds` ≤ `duration_s`. Límites:
+      solo se guardan partidas terminadas y el tiempo en espectador cuenta como jugado.
 - [x] **Sacar y devolver mapas del pool desde cs2-watch** (2026-09-21, GGExtras 0.21.0): `ggx_map_off` /
       `ggx_map_on` mueven la entrada entre `cfg/GGMCmaps.json` y `cfg/GGMCmaps.disabled.json` y corren `reloadmaps`.
       El nextmap no se puede sacar (hay que cambiarlo antes); solo soporta el formato de un pool.
@@ -176,6 +184,20 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 - [ ] **cs2-watch sin commitear** (2026-09-20): multi-servidor, pestaña Datos, i18n es/en, log legible, botones de
       bots y lista de mapas. 13 archivos tocados y 6 nuevos en `F:\git\cs2-watch`, compilados y probados contra
       producción. Detalle en `docs/Bitacora-2026-09-20.md`.
+- [ ] **Web de ranking y perfiles** (2026-09-21): `gks.goadatti.com/ranking/` y `/jugador/<SteamID64>`, repo `gks`.
+      Tiene ranking del mes e histórico, perfil público con KPIs y gráficos, y login con Discord que desbloquea la
+      comparación y el historial. Detalle en el README de `gks`. Probado en local contra la base real, en escritorio y
+      en 390 px. **Falta:** publicarla (push a `main` de `gks`) y probar el login en producción con una cuenta real.
+      La raíz sigue redirigiendo al Discord (decisión del usuario).
+- [ ] **Borrar los datos de prueba de la web** (cargados el 2026-09-21, a pedido del usuario, en su cuenta waha):
+      45 partidas falsas con IDs **24 a 68**. Solo tocan las tablas de partidas; no hay nada en
+      `ggextras_player_stats`, `gungame_playerdata` ni en logros. Se ven también en la pestaña Datos de cs2-watch.
+      Para borrarlas:
+      `DELETE FROM ggextras_match_players WHERE match_id BETWEEN 24 AND 68 AND authid = '76561198001397523';`
+      `DELETE FROM ggextras_matches WHERE id BETWEEN 24 AND 68;`
+- [ ] **Validar el latido del server** (GGExtras 0.25.0, desplegado 2026-09-21): `ggextras_server_status` se
+      actualiza cada 60 s. Con gente dentro, `updated_at` tiene que avanzar y `online` tiene que listar los SteamID.
+      Creado y verificado con el server vacío.
 - [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
 - [ ] **Darle valor al top 10 dentro del server**: hecho el tag `[TOP N]` en el scoreboard y la estela de color
       (top 3), el aviso en chat al entrar un top 3 y los roles de Discord (Top 1/2/3/10 del mes + permanentes por
