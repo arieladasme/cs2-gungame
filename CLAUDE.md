@@ -198,6 +198,15 @@ Config relevante en `GG1MapChooser.json`: usar `WinDrawSettings` (timing "al gan
   `[EROR]` — cargar un mapa a mano pa' probarlo no es un error. Re-aplicarlo en cada update de upstream.
   Pa' compilarlo hace falta `ssypchenko/ggmcAPI` clonado **al lado** (`F:\git\ggmcAPI`, el `ProjectReference`
   es relativo); el `.gitmodules` del repo quedó huérfano y `git submodule update` no trae nada.
+- **`CoreAPI.GetPlayerLevel(slot)` expulsa al jugador si GG2 no lo tiene registrado** (`FindBySlot` →
+  `kickid <id> NoSteamId`). Un plugin de extensión debe llamarlo solo para jugadores con `TeamNum >= 2` y
+  `Connected == PlayerConnectedState.Connected`, y nunca en cada tick: quien se está desconectando ya salió
+  del mapa de GG2 pero sigue un rato en `Utilities.GetPlayers()`.
+- **HUD propio con `custom_hud_layout`** (update de CS2 del 24-08-2026; en GGExtras desde 0.22.0): layout
+  Panorama que viaja en el addon del Workshop. Trampas en `nvmxre/cs2-hud-panel` (docs/GOTCHAS.md): el root del
+  XML sin `id`, nada de `<Image>` (la imagen va como `background-image`), crear la entidad recién en el
+  `round_start` (antes envenena el caché de entidades de CSS para todo el proceso) y `StrLayout` con la ruta
+  fuente completa (`panorama/layout/custom_game/x.xml`). Para probar sin publicar: `hud/build.ps1 -Dev`.
 - Commits: Conventional Commits en español (`feat:`, `fix:`), cuerpo en imperativo es-MX explicando el porqué si no es evidente.
 
 ---

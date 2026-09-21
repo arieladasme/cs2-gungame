@@ -29,6 +29,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       al leer el `GGExtras.json` del server: rotarlo primero (Portal → Bot → Restablecer token) y reponerlo en ese JSON.
       El **2026-09-20 se sumó la password de MySQL**, impresa entera en el transcript al leer `gungame-db.json`:
       rotarla en el panel (Databases) y reponerla en `gungame-db.json`, `GGExtras.json` y el `mysql_dsn` de cs2-watch.
+      El **2026-09-21 volvió a salir entera**, al listar el `config.json` de cs2-watch (el filtro de secretos no cubría `mysql_dsn`).
 - [ ] **Pool de mapas**: revisar en persona `fy_simpsons` (muertes por `trigger_hurt`). **`3461824328` NO es huérfano** (2026-09-17): es el addon de QuakeSounds de Kandru,
       montado por `mm_extra_addons`, del que salen los 12 sonidos `QuakeSoundsD.*`; no borrarlo. Opcional: entrar a `yaksart_qishloq`
       3772103497 y `aim_dota_mid_d` 3307132429, descartados porque no entran bots.
@@ -142,6 +143,18 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       camino, en [[hud-central-cs2-no-sostiene-imagen]]: el HUD pide la imagen por red en cada dibujo
       (arreglado con `vercel.json` que la cachea un año en el repo `gks`) y no sostiene una imagen fija
       más de ~2 s. `ggx_welcome now` la muestra al instante para probar.
+- [x] **Nivel en las cartas de calavera** (2026-09-21, GGExtras 0.22.0, `LevelCards`, activo por defecto): las cartas
+      junto a la vida muestran el nivel de GunGame en vez de las kills de la ronda (`m_iNumRoundKills`). Visto en local.
+- [x] **Bienvenida con stats** (2026-09-21, GGExtras 0.23.0): "Bienvenid@, {PLAYER}" y debajo `{STATS}` = "Tienes N
+      victorias con N fileteos" (totales históricos, leídos de MySQL al conectar). Ya va en el `CenterHtml` de
+      producción. Falta verlo con una cuenta que tenga historial.
+- [ ] **Publicar el banner en panel propio** (`custom_hud_layout`, update de CS2 del 24-08-2026): sin marco dorado, sin
+      parpadeo y con el logo dentro del addon. Probado en local el 2026-09-21. El layout vive en `gg-extensions/hud/` y
+      `hud/build.ps1` lo compila dentro de `content/csgo_addons/gungame_sounds`. Falta: recompilar el addon **entero**
+      (sonidos + panorama), publicarlo con Workshop Manager (**Sin listar**, nunca *Oculto*), esperar moderación y
+      recién ahí poner `WelcomeLayoutSeconds: 6` en el `GGExtras.json` de producción. Con 0 ni se crea la entidad.
+      Antes de publicar, confirmar desde qué carpeta salió la versión que está en moderación, para no pisarla.
+      Al terminar, borrar los compilados sueltos del cliente en `game/csgo/panorama/*/custom_game/gks_*`.
 - [ ] El addon de sonidos (`3766168370`) tiene una versión **esperando aprobación de moderación**
       de Steam. Sirve igual porque Steam entrega la última versión aprobada, pero conviene
       confirmar que la nueva pase.
