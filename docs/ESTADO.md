@@ -158,7 +158,9 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       2. Con la versión nueva aprobada, en producción: `QuakeSounds.json` a `gg.quake.*` (y `soundevent_file` a
          `soundevents/soundevents_addon.vsndevts`), `quakesounds reload`, probar y recién ahí sacar `3461824328`
          (Kandru) de `mm_extra_addons` y `mm_client_extra_addons`. `WelcomeLayoutSeconds: 6` en `GGExtras.json`.
-      3. Borrar los compilados sueltos del cliente en `game/csgo/panorama/*/custom_game/gks_*`.
+      3. Borrar los compilados sueltos que `build.ps1 -Dev` dejó en el cliente (`D:\SteamLibrary\…\game\csgo\panorama\`):
+         `layout/custom_game/gks_*`, `styles/custom_game/gks_*` y la carpeta `images/map_icons/gks/`. Si quedan,
+         tapan lo que baja del Workshop y la verificación engaña.
 
 ## Extensiones pendientes (el grueso del desarrollo por delante)
 
