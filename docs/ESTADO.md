@@ -187,8 +187,19 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 - [ ] **Web de ranking y perfiles** (2026-09-21): `gks.goadatti.com/ranking/` y `/jugador/<SteamID64>`, repo `gks`.
       Tiene ranking del mes e histórico, perfil público con KPIs y gráficos, y login con Discord que desbloquea la
       comparación y el historial. Detalle en el README de `gks`. Probado en local contra la base real, en escritorio y
-      en 390 px. **Falta:** publicarla (push a `main` de `gks`) y probar el login en producción con una cuenta real.
-      La raíz sigue redirigiendo al Discord (decisión del usuario).
+      en 390 px. **Publicada** el mismo día, con fotos de Steam (`STEAM_API_KEY`) y el podio con borde neón.
+      **Falta:** probar el login con Discord en producción con una cuenta real. La raíz sigue redirigiendo al
+      Discord (decisión del usuario).
+- [x] **Plan futuro: potenciar la web con React Bits** (`DavidHDev/react-bits`, MIT + Commons Clause). **Fase 1
+      hecha (2026-09-21): `gks` migrado a React 19 + Vite 7 + Tailwind v4** (MPA: entries `ranking/` y
+      `jugador/`; raíz y `/vincular/` siguen estáticos en `public/` por OG y OAuth; API sin cambios; MCP
+      `shadcn` + registry `@react-bits` configurados en el repo). **Fase 2 hecha (2026-09-21):** instalados y
+      cableados `ElectricBorder` (podio #1), `CountUp` (victorias del podio, KPIs y places del perfil) y
+      `DecryptedText` (título del ranking), con gate de `prefers-reduced-motion` en `lib.js`.
+      **Fase 3 hecha (2026-09-21):** `ClickSpark` en CTAs/tabs/botones del perfil (helper `Spark` con gate),
+      `Reveal` local con `motion/react` `whileInView` en los 4 paneles del perfil; descartado `ScrollReveal`
+      (solo aceptaba strings, no envolvía `.panel`) y quitado `gsap`. Pendiente opcional: más efectos
+      (`BorderGlow`/`StarBorder`, fondo WebGL) si se quiere — con 4 alcanza.
 - [ ] **Borrar los datos de prueba de la web** (cargados el 2026-09-21, a pedido del usuario, en su cuenta waha):
       45 partidas falsas con IDs **24 a 68**. Solo tocan las tablas de partidas; no hay nada en
       `ggextras_player_stats`, `gungame_playerdata` ni en logros. Se ven también en la pestaña Datos de cs2-watch.
@@ -214,6 +225,15 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 
 ## Cerrado
 
+- [x] **HE en nivel cuchillo declaraba ganador** (2026-09-21): `CanLevelUpWithNadeOnKnife: true` en la config
+      de prod permitía subir con una granada mientras el arma activa era el cuchillo. Al estar en el último
+      nivel, el `ChangeLevel(+1)` excedía el máximo y `DeclareWinnerCommon` daba win — reporte de pAkRi con
+      doble kill de HE (la 2ª death solo quedaba ignorada por `GameWinner`). Ruta en `gg2.cs`: rama
+      "wrong weapon" (~1964) → `CanLevelUpWithMapNades && CanLevelUpWithNadeOnKnife` (~1967) →
+      `LevelUpWithPhysics` → `ChangeLevel` (~3965) → win (~4034). Fix: flag a `false` en el `gungame.json`
+      de prod (default del código, `gungame_config.cs:524`); **sin tocar código**. Aplica en el próximo
+      `OnMapStart` → `LoadConfig()` (`gg2.cs:945`); no se reinició el server. El repo
+      (`cfg_files/.../gungame.json:186`) sigue en `true` — alinearlo o documentarlo si se quiere paridad.
 - [x] **Las victorias contra bots ya suman** (2026-09-17, GGExtras 0.17.1): con el server poblado de bots
       y `DontAddWinsOnBot: true`, ningún humano sumaba nunca (Raili ganó dos veces y no quedó registro).
       Ahora la columna `bot_wins` de `ggextras_player_stats` las cuenta, el board del mes muestra el total
