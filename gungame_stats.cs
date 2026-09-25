@@ -18,6 +18,8 @@ namespace GunGame.Stats
     public class StatsManager
 	{
         private GunGame Plugin;
+        // GeoIP returns a country, not a language: "cl" has no lang file (falls back to English) and "ar" (Argentina) is Arabic.
+        private static readonly HashSet<string> SpanishCountries = new() { "ar", "bo", "cl", "co", "cr", "cu", "do", "ec", "es", "gt", "hn", "mx", "ni", "pa", "pe", "pr", "py", "sv", "uy", "ve" };
 //        private SqliteConnection _sqliteConn = null!;
 //        private MySqlConnection _mysqlConn = null!;
         private bool _isDatabaseReady = false;
@@ -610,7 +612,7 @@ namespace GunGame.Stats
             {
                 countrycode = ipcountrycode;
             }
-            var tempCulture = new CultureInfo(countrycode);
+            var tempCulture = new CultureInfo(SpanishCountries.Contains(countrycode) ? "es" : countrycode);
             
             Server.NextFrame(() =>
             {
