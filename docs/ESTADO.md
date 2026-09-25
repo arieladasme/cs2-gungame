@@ -24,6 +24,44 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 
 ## Higiene del entorno
 
+- [x] **`gungame.json` de prod envuelto en JSON de la API** (21-09 23:17 → 22-09 01:07 UTC): GG2 corrió con toda la
+      config por defecto (sin respawn del plugin, `ShootKnifeBlock` activo, sin nivel por cuchillo a bots). Reparado
+      y aplicado con `gg_config gungame`. Tras escribir una config por la API, bajarla cruda y comparar.
+- [ ] **Gamedata de CSS parchado a mano en prod** (2026-09-22, CS2 14182): el update rompió la firma de
+      `FireOutputInternal` (sin sonidos) y corrió 6 offsets de vtable (`Respawn` hacía caer el server).
+      Detalle y herramientas en `tools/gamedata/README.md`. El 2026-09-24 se corrigió además `TerminateRound`
+      (desde el 22-09 ninguna partida cambiaba de mapa al ganar); validado con bots: cambio de mapa 23 s después
+      de la victoria. Sigue rota `AcceptInput` (sin brillo del ganador).
+- [ ] **Migrar a CSS 1.0.375+** (salió 2026-09-24, trae el gamedata oficial de 1.41.8.x). **No es solo CSS:** está
+      compilado contra Metamod con SourceHook API **018**, así que exige a la vez Metamod ≥ git1460 y
+      MultiAddonManager v1.6 (ver gotcha en CLAUDE.md §4). Trae además KHook (reescritura de los hooks del núcleo,
+      40 archivos, PR hecho mayormente con IA): sin beneficio directo para nosotros, pero es la base de las próximas
+      versiones. Decisión (2026-09-24): quedarse en 1.0.374 mientras funcione. Migrar cuando **(a)** un update de CS2
+      vuelva a romper firmas, o **(b)** salga 1.0.376 o pasen 1-2 semanas sin reportes graves en los issues de CSS.
+      Orden: probar en `D:\cs2-server` → recompilar GG2, GGExtras, GGTrails y GG1MapChooser contra 1.0.375 →
+      prod recién tras una partida completa con cambio de mapa.
+- [ ] **Ticket a RDSNode: reponer Metamod tras cada update de CS2** (2026-09-22, aún sin enviar). Cada update
+      reescribe `game/csgo/gameinfo.gi` y borra la línea de Metamod: el server arranca en casual sin plugins.
+      `AUTO_UPDATE` quedó en **1** a propósito (un server atrasado tampoco deja entrar a nadie); hasta que
+      apliquen esto, tras cada update hay que reponer la línea a mano. Con esto aplicado, crear en el panel
+      un reinicio diario a las 06:00 Chile. Texto:
+      > Hola. En el servidor `9db02da2`, ¿pueden agregar al inicio del comando de arranque (después del update
+      > de SteamCMD, antes de lanzar `cs2`) esta línea? Repone Metamod cuando un update de CS2 sobrescribe
+      > `gameinfo.gi`:
+      > `grep -q 'csgo/addons/metamod' game/csgo/gameinfo.gi || sed -i '/Game_LowViolence/a\\t\t\tGame\tcsgo/addons/metamod' game/csgo/gameinfo.gi;`
+      > Y de paso: el comando trae `-maxplayers 16` fijo en vez de usar la variable `MAX_PLAYERS`. ¿Pueden
+      > cambiarlo a `-maxplayers {{MAX_PLAYERS}}`? Y agregar `-condebug` a los parámetros de `cs2`, para que
+      > la consola quede en `game/csgo/console.log` y podamos diagnosticar caídas. Gracias.
+
+      Motivo de `-condebug` (2026-09-25): el server se cayó al ganar un humano (17:58 UTC, build 14184) y no
+      quedó nada; CS2 no tiene `con_logfile` y el comando de arranque viene fijo del egg (no usa las variables
+      de Startup, así que no se puede agregar el flag desde el panel).
+- [ ] **Caída al ganar un humano** (2026-09-25 17:58 UTC, POSTAL DUDE con cuchillo en `fy_iceworld`, build 14184):
+      el proceso murió en <0,5 s tras `WinnerEvent`, sin traza en ningún log. Primera vez; las victorias de humanos
+      del 23 y 24-09 (build 14182/14183) terminaron bien. La prueba con bots de 14184 no cubre lo que se le manda a
+      un cliente al ganar. Si se repite: apagar `WinnerShowEnabled` de GGExtras para aislar, y si sigue, adelantar la
+      migración a CSS 1.0.375. Desde GGExtras 0.26.0 (2026-09-25) una caída queda registrada sola en
+      `logs/gg-errors-AAAAMMDD.txt` ("CAÍDA detectada" + las 25 líneas previas); revisar ese archivo primero.
 - [ ] **Rotar credenciales**: la API key del panel de Pterodactyl y el GSLT quedaron expuestos
       en el transcript de la sesión del 2026-09-15; la password RCON, parcialmente, en la del 2026-09-16. El **token del bot de Discord** quedó entero en el de la sesión del 2026-09-17,
       al leer el `GGExtras.json` del server: rotarlo primero (Portal → Bot → Restablecer token) y reponerlo en ese JSON.
@@ -172,6 +210,18 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 
 ## Extensiones pendientes (el grueso del desarrollo por delante)
 
+- [ ] **Ideas del parche de CS2 del 2026-09-22 (1.41.8.2)** — evaluar, nada comprometido:
+      - **Clan Tag por grupo de Steam**: el jugador elige en su perfil el tag de un grupo al que pertenece. Promover
+        el grupo de Steam GKS para que la comunidad lleve `[GKS]` (y quizá detectarlo en GGExtras para un rol o premio).
+      - **Workshop (mapas)**: `minimap_volume` (minimapa custom por zona), `sky_camera_volume`/`_target` (skybox por
+        ubicación), `point_deathcam_bounds` (limita la cámara de muerte) y `env_shake_volume`. Útiles si hacemos o
+        adaptamos mapas GG propios.
+      - **Scripting de CS2** (el de Valve, no CSS): entidades `CSRadarPoint` (marcar puntos en el radar: ¿el líder?) y
+        `CSObservablePoint`, `AddTeamMoney`, callback `OnPlayerTeamChanged`, y `SetDialogVariableString` que acepta
+        tokens de localización (textos del HUD `custom_hud_layout` traducibles).
+      - Varios sin impacto directo: stickers en la C4, marcador del entretiempo corregido, arreglo de evasión de ban
+        por expulsión.
+
 - [ ] **Plugin de extensión GG** — `GGExtras` en `F:\git\gg-extensions\` (repo privado, junto a GGTrails).
       Ya hechos: bienvenida, webhooks de Discord, show del ganador, sonidos `gg.intro`/`takenlead`/`lostlead`/`tiedlead`,
       estela y tag del top, mensajes periódicos y logros. **MVP del líder** (2026-09-20, 0.19.0): la estrella del
@@ -181,9 +231,6 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       freeze end): no hace falta en GGExtras.
 - [x] ~~Advertisements periódicos en chat~~ (2026-09-17, GGExtras 0.13.0): `ChatAds` con 7 mensajes cada 3 min,
       solo con humanos conectados. Falta verlos rotar en el juego.
-- [ ] **cs2-watch sin commitear** (2026-09-20): multi-servidor, pestaña Datos, i18n es/en, log legible, botones de
-      bots y lista de mapas. 13 archivos tocados y 6 nuevos en `F:\git\cs2-watch`, compilados y probados contra
-      producción. Detalle en `docs/Bitacora-2026-09-20.md`.
 - [ ] **Web de ranking y perfiles** (2026-09-21): `gks.goadatti.com/ranking/` y `/jugador/<SteamID64>`, repo `gks`.
       Tiene ranking del mes e histórico, perfil público con KPIs y gráficos, y login con Discord que desbloquea la
       comparación y el historial. Detalle en el README de `gks`. Probado en local contra la base real, en escritorio y
@@ -209,7 +256,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 - [ ] **Validar el latido del server** (GGExtras 0.25.0, desplegado 2026-09-21): `ggextras_server_status` se
       actualiza cada 60 s. Con gente dentro, `updated_at` tiene que avanzar y `online` tiene que listar los SteamID.
       Creado y verificado con el server vacío.
-- [ ] Admin (opcional): CS2-SimpleAdmin + `admins.json` del respaldo (credenciales nuevas).
+- [x] Admin: CS2-SimpleAdmin 1.8.2b en prod (2026-09-23), MySQL. Moderador: pAkRi (`76561197999528292`,
+      generic/kick/ban/chat/slay/changemap, inmunidad 50). Nuevos admins: `css_addadmin <steamid64> <nombre> <flags> <inmunidad>` por RCON.
 - [ ] **Darle valor al top 10 dentro del server**: hecho el tag `[TOP N]` en el scoreboard y la estela de color
       (top 3), el aviso en chat al entrar un top 3 y los roles de Discord (Top 1/2/3/10 del mes + permanentes por
       logro). Queda el **modelo/personaje**, lo único con riesgo de reglas de Valve.
@@ -225,6 +273,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
 
 ## Cerrado
 
+- [x] **cs2-watch commiteado** (2026-09-25): la reescritura multi-servidor del 20-09 más los arreglos del 24-09
+      (jugador duplicado por el userid 65280, nombre coloreado por equipo, log sin asistencias).
 - [x] **HE en nivel cuchillo declaraba ganador** (2026-09-21): `CanLevelUpWithNadeOnKnife: true` en la config
       de prod permitía subir con una granada mientras el arma activa era el cuchillo. Al estar en el último
       nivel, el `ChangeLevel(+1)` excedía el máximo y `DeclareWinnerCommon` daba win — reporte de pAkRi con
