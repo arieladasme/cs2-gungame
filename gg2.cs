@@ -2915,8 +2915,9 @@ namespace GunGame
 
             if (levelupWithKnife && Config.BlockWeaponSwitchIfKnife && !dropKnife && !playerController.IsBot)
             {
-                // GiveNamedItem deploys the new weapon; re-select the knife a frame later so knife chains aren't cut.
-                Server.NextFrame(() =>
+                // GiveNamedItem deploys the new weapon; re-select the knife afterwards so knife chains aren't cut.
+                // One frame stopped being enough with CS2 1.41.8.2: the deploy lands later and wins.
+                AddTimer(0.15f, () =>
                 {
                     if (playerController.IsValid) playerController.ExecuteClientCommandFromServer("slot3");
                 });
