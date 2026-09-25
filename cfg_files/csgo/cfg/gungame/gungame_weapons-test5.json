@@ -1,0 +1,15 @@
+{
+  "_comment": "ORDEN DE PRUEBA - 5 niveles. El real (37 niveles) esta en gungame_weapons-full37.json. Los 4 primeros son los reales; el nivel 5 es el cuchillo para llegar rapido al fin de partida y probar la votacion.",
+  "WeaponOrder": {
+    "1": "glock",
+    "2": "usp_silencer",
+    "3": "hkp2000",
+    "4": "p250",
+    "5": "knife"
+  },
+  "MultipleKillsPerLevel": {
+    "5": 1
+  },
+  "RandomWeaponReserveLevels": "",
+  "RandomWeaponOrder": false
+}
