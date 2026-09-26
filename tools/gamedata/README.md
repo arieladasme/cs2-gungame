@@ -38,6 +38,8 @@ fábrica (para revertir: subirlo y reiniciar). Cambios: firma de `FireOutputInte
 `CommitSuicide` 387, `FindPickerEntity` 26. El 2026-09-24 se corrigió `CCSGameRules_TerminateRound`: la firma de fábrica seguía dando 1 coincidencia, pero en
 14182 cae en la función que dispara `player_connect`, así que GG2 nunca cerraba la partida y el mapa no cambiaba al
 ganar. Firma nueva sacada de `CS2_VibeSignatures` (14182, `func_va 0x13ebb00`). **Una firma con 1 coincidencia puede
-estar en la función equivocada:** comparar la dirección con la de la referencia. Sigue rota `CEntityInstance_AcceptInput` (excepción
-controlada; afecta el brillo del ganador de GGExtras y `ShowHint`/`Kill` de GG2). Al instalar un CSS
-nuevo su `gamedata.json` reemplaza este.
+estar en la función equivocada:** comparar la dirección con la de la referencia. El 2026-09-25 (14185) se corrigió `CEntityInstance_AcceptInput`,
+rota desde 14182 (brillo del ganador de GGExtras, `ShowHint`/`Kill` de GG2): firma de `CS2_VibeSignatures` 14184, 1
+coincidencia, mismo tamaño (`0xdd`) y mismos registros de argumentos; `outputId` ya no se lee. Siguen en 0
+coincidencias, sin uso directo de nuestros plugins: `CanUse`, `CanAcquire`, `StartTouch`, `CheckTransmit` e
+`InitAllSystems_pFirst` (2). Al instalar un CSS nuevo su `gamedata.json` reemplaza este.

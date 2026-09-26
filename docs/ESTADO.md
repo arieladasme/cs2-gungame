@@ -31,7 +31,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       `FireOutputInternal` (sin sonidos) y corrió 6 offsets de vtable (`Respawn` hacía caer el server).
       Detalle y herramientas en `tools/gamedata/README.md`. El 2026-09-24 se corrigió además `TerminateRound`
       (desde el 22-09 ninguna partida cambiaba de mapa al ganar); validado con bots: cambio de mapa 23 s después
-      de la victoria. Sigue rota `AcceptInput` (sin brillo del ganador).
+      de la victoria. `AcceptInput` (brillo del ganador) corregida el 2026-09-25 en 14185 — falta verla en una
+      victoria real.
 - [ ] **Migrar a CSS 1.0.375+** (salió 2026-09-24, trae el gamedata oficial de 1.41.8.x). **No es solo CSS:** está
       compilado contra Metamod con SourceHook API **018**, así que exige a la vez Metamod ≥ git1460 y
       MultiAddonManager v1.6 (ver gotcha en CLAUDE.md §4). Trae además KHook (reescritura de los hooks del núcleo,
@@ -120,6 +121,7 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       | `gg_mini_dust` | 3361055721 | 16/16 | 32 |
       | `fy_iceworld` | 3070238628 | 16/16 | 32 |
       | `de_vc2_inferno_gg1` | 3329658347 | 16/16 | 32 |
+      | `35hp_ring` | 3076376088 | 16/16 | 32 |
       | `ar_shoots` | stock | 17/17 | 34 |
       | `aim_map_s2r` | 3070260370 | 18/18 | 36 |
       | `ar_baggage` | stock | 20/20 | 40 |
@@ -247,7 +249,8 @@ lo motivaba lo causaba un addon del Workshop oculto (ver gotcha en CLAUDE.md §4
       `Reveal` local con `motion/react` `whileInView` en los 4 paneles del perfil; descartado `ScrollReveal`
       (solo aceptaba strings, no envolvía `.panel`) y quitado `gsap`. Pendiente opcional: más efectos
       (`BorderGlow`/`StarBorder`, fondo WebGL) si se quiere — con 4 alcanza.
-- [ ] **Borrar los datos de prueba de la web** (cargados el 2026-09-21, a pedido del usuario, en su cuenta waha):
+- [x] ~~**Borrar los datos de prueba de la web**~~ (borrados el 2026-09-25: 45 partidas y 45 filas; se hizo antes de que
+      Google y Bing indexaran los perfiles). Cargados el 2026-09-21, a pedido del usuario, en su cuenta waha:
       45 partidas falsas con IDs **24 a 68**. Solo tocan las tablas de partidas; no hay nada en
       `ggextras_player_stats`, `gungame_playerdata` ni en logros. Se ven también en la pestaña Datos de cs2-watch.
       Para borrarlas:
